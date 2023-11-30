@@ -101,7 +101,7 @@ if __name__ == '__main__':
     }
 
     # Adv model
-    adv_model = AdversarialDecoder()
+    adv_model = AdversarialDecoder(device=device)
     optimizer = torch.optim.Adam(adv_model.parameters(), 1e-4)
     adv_dict = {
         'model': adv_model,
