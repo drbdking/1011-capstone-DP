@@ -7,7 +7,7 @@ from transformers import AutoConfig
 from transformers import BertModel, BertConfig
 import torch
 from torch import nn
-
+from tqdm.auto import tqdm
 
 from utils import *
 from data import *
@@ -26,9 +26,11 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
         # train adv, get embedding (no grad), hidden state and label (input token ids)
         print("-" * 10)
         print(f"epoch {epoch + 1}/{args.num_epochs}")
+        
         step = 0
         train_loss = 0
         adv_dict['model'].train()
+        train_progress_bar = tqdm(range(len(train_loader)))
         for batch in train_loader:
             step += 1
             # Input of adv model, no grad
@@ -44,6 +46,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_dict['optimizer'].step()
             adv_dict['optimizer'].zero_grad()
             train_loss += loss.item()
+            train_progress_bar.update(1)
         train_loss /= step
         print(f"epoch {epoch + 1} average train loss: {train_loss:.4f}")
 
@@ -51,6 +54,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             val_loss = 0
             step = 0
             adv_dict['model'].eval()
+            val_progress_bar = tqdm(range(len(val_loader)))
             with torch.no_grad():
                 for batch in val_loader:
                     step += 1
@@ -63,6 +67,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
                     output = adv_dict['model'](embeddings, hidden_states)
                     loss = adv_dict['loss_function'](output, input_ids)
                     val_loss += loss.item()
+                    val_progress_bar.update(1)
             val_loss /= step
             print(f"epoch {epoch + 1} average val loss: {val_loss:.4f}")
     # eval adv
