@@ -86,7 +86,7 @@ if __name__ == '__main__':
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-4)
     parser.add_argument("--num_epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--val_interval", type=int, default=1)
 
     args = parser.parse_args()
