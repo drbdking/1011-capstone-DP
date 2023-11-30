@@ -74,6 +74,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
                     val_progress_bar.update(1)
             val_loss /= step
             print(f"epoch {epoch + 1} average val loss: {val_loss:.4f}")
+            val_progress_bar.close()
     # eval adv
     # train bert model, get input ids, attention mask, token type ids
     # eval bert
