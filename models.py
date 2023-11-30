@@ -50,6 +50,7 @@ class AdversarialDecoder(nn.Module):
         nn (_type_): _description_
     """
     # torch 2.1 has bias in decoder layer and layer norm
+    # torch 2.1 has tgt_is_causal
     def __init__(self, d_model=768, nhead=12, num_decoder_layers=6, dim_feedforward=2048,
                  tgt_vocab_size=10000,
                  dropout=0.1, activation=F.relu, layer_norm_eps=1e-5,
@@ -63,11 +64,11 @@ class AdversarialDecoder(nn.Module):
         self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm)
         self.generator = nn.Linear(d_model, tgt_vocab_size)
 
-    def forward(self, tgt, memory, tgt_is_causal=True):
+    def forward(self, tgt, memory):
         # Get seq len
         seq_len = get_seq_len(tgt, batch_first=True)
         # The input tgt should be Bert embedding from the lowest layer
-        output = self.decoder(tgt, memory, nn.Transformer.generate_square_subsequent_mask(seq_len), tgt_is_causal=tgt_is_causal)
+        output = self.decoder(tgt, memory, tgt_mask=nn.Transformer.generate_square_subsequent_mask(seq_len))
         # Map to vocab size
         output = self.generator(output)
         return output
