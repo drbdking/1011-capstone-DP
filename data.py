@@ -28,8 +28,8 @@ def split_data(df, ratios, shuffle=True, random_state=42):
     
 def load_data(tsv_path, train_batch_size, val_batch_size):
     df = pd.read_csv(tsv_path, sep = '\t')
-    data = {'question1': df['question1'].tolist(), 
-            'question2': df['question2'].tolist(), 
+    data = {'question1': df['question1'].astype(str).tolist(), 
+            'question2': df['question2'].astype(str).tolist(), 
             'label': df['is_duplicate'].tolist()}
     qqp_dataset = Dataset.from_dict(data)
     qqp_dataset = qqp_dataset.shuffle()
