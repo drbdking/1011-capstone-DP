@@ -34,6 +34,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
         for batch in train_loader:
             step += 1
             # Input of adv model, no grad
+            print(batch.keys())
             input_ids = batch['input_ids'].to(device)
             token_type_ids = batch['token_type_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
