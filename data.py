@@ -42,9 +42,9 @@ def load_data(tsv_path, train_batch_size, val_batch_size):
     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
     train_dataset.set_format("torch")
     val_dataset.set_format("torch")
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    data_collator = DataCollatorWithPadding(tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, collate_fn=data_collator)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=data_collator)
+    # tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+    # data_collator = DataCollatorWithPadding(tokenizer)
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size)
     return train_dataset, train_loader, val_dataset, val_loader
     
