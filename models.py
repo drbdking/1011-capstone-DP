@@ -32,7 +32,7 @@ class BinaryClassificationHead(nn.Module):
     def __init__(self, input_size):
         super().__init__()
         self.dense = nn.Linear(input_size, input_size)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.2)
         self.out_proj = nn.Linear(input_size, 2)
 
     def forward(self, features):  
