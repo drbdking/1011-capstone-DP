@@ -68,8 +68,8 @@ class AdversarialDecoder(nn.Module):
     def forward(self, tgt, memory):
         # The input tgt should be Bert embedding from the lowest layer
         mask_1 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(tgt, batch_first=True)).to(self.device)
-        mask_2 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(memory, batch_first=True)).to(self.device)
-        output = self.decoder(tgt, memory, tgt_mask=mask_1, memory_mask=mask_2)
+        # mask_2 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(memory, batch_first=True)).to(self.device)
+        output = self.decoder(tgt, memory, tgt_mask=mask_1)
         # Map to vocab size
         output = self.generator(output)
         return output
