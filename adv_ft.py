@@ -26,7 +26,6 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
     val_progress_bar = tqdm(range(len(val_loader)))
 
     for epoch in range(args.num_epochs):
-        
         print("-" * 10)
         print(f"epoch {epoch + 1}/{args.num_epochs}")
         tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
@@ -39,6 +38,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
         embedding_dict['base_model'].train()
         embedding_dict['classifier'].train()
         
+        train_progress_bar.refresh()
+        train_progress_bar.reset()
+
         for batch in train_loader:
             step += 1
             # Train adv, get embedding (no grad), hidden state and label (input token ids)
@@ -92,17 +94,19 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
         print(f"epoch {epoch + 1} average adv train loss: {adv_train_loss:.4f}")
         print(f"epoch {epoch + 1} average embedding train adv loss: {embedding_train_adv_loss:.4f}, average embedding train cls loss: {embedding_train_cls_loss:.4f}")
 
-        train_progress_bar.refresh()
-        train_progress_bar.reset()
 
         if (epoch + 1) % args.val_interval == 0:
             step = 0
             adv_val_loss = 0
             embedding_val_cls_loss = 0
+            
             adv_dict['model'].eval()
             embedding_dict['base_model'].eval()
             embedding_dict['classifier'].eval()
             
+            val_progress_bar.refresh()
+            val_progress_bar.reset()
+
             with torch.no_grad():
                 for batch in val_loader:
                     step += 1
@@ -140,9 +144,6 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             embedding_val_cls_loss /= step
             print(f"epoch {epoch + 1} average val loss: {adv_val_loss:.4f}")
             print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}")
-
-            val_progress_bar.refresh()
-            val_progress_bar.reset()
 
     train_progress_bar.close()
     val_progress_bar.close()
