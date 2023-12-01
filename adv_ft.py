@@ -79,7 +79,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_output = torch.transpose(adv_output, 1, 2)
             adv_loss = adv_dict['loss_function'](adv_output, input_ids)
             cls_loss = embedding_dict['loss_function'](cls_output, label)
-            emebdding_loss = cls_loss - adv_loss
+            emebdding_loss = cls_loss - 1.5 * adv_loss
             emebdding_loss.backward()
             embedding_dict['optimizer'].step()
             embedding_dict['optimizer'].zero_grad()
@@ -103,7 +103,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_dict['model'].eval()
             embedding_dict['base_model'].eval()
             embedding_dict['classifier'].eval()
-            
+
             val_progress_bar.refresh()
             val_progress_bar.reset()
 
@@ -128,7 +128,6 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
                     cls_output = embedding_dict['classifier'](sentence_embedding)
                     label = batch['label'].to(device)
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
-                    emebdding_loss = cls_loss - adv_loss
                     embedding_val_cls_loss += cls_loss.item()
 
                     val_progress_bar.update(1)
