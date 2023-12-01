@@ -21,6 +21,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
     # epoch iteration
     adv_dict['model'].to(device)
     embedding_dict['base_model'].to(device)
+    embedding_dict['classifier'].to(device)
     train_progress_bar = tqdm(range(len(train_loader)))
     val_progress_bar = tqdm(range(len(val_loader)))
 
