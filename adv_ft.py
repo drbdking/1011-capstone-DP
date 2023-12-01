@@ -76,7 +76,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
                     
                 # Decode the last batch
                 output_ids = torch.argmax(output, dim=1).detach().cpu()
-                original_seq = [x + " " + y for x, y in zip(batch['question1'], batch['question2'])]
+                original_seq = tokenizer.batch_decode(input_ids.cpu())
                 pred_seq = tokenizer.batch_decode(output_ids)
                 for ref, pred in zip(original_seq, pred_seq):
                     print(f"Original input: {ref} \nAdv output: {pred}")

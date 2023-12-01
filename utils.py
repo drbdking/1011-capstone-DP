@@ -6,5 +6,5 @@ from transformers import AutoTokenizer
 
 def tokenize_func(input):
     tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    return tokenizer(input['question1'], input['question2'], padding='longest', truncation=True)
+    return tokenizer(input['question1'], input['question2'], padding=True, truncation=True)
 

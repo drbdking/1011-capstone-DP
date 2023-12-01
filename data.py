@@ -1,6 +1,8 @@
 import datasets
 from datasets import Dataset
 from torch.utils.data import DataLoader
+from transformers import AutoTokenizer
+from transformers import DataCollatorWithPadding
 import numpy as np
 import pandas as pd
 
@@ -36,10 +38,13 @@ def load_data(tsv_path, train_batch_size, val_batch_size):
     qqp_dataset = qqp_dataset.select(range(10000))
     qqp_dataset = qqp_dataset.map(tokenize_func, batched=True, load_from_cache_file=False)
     # todo: consider dropping columns question1 and question2
+    qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
     train_dataset.set_format("torch")
     val_dataset.set_format("torch")
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size)
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+    data_collator = DataCollatorWithPadding(tokenizer)
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, collate_fn=data_collator)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, collate_fn=data_collator)
     return train_dataset, train_loader, val_dataset, val_loader
     
