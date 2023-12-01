@@ -37,9 +37,9 @@ class BinaryClassificationHead(nn.Module):
 
     def forward(self, features):  
         x = self.dropout(features) # should be hidden state after mean pooling
-        x = self.dense(x)
-        x = torch.tanh(x)
-        x = self.dropout(x)
+        # x = self.dense(x)
+        # x = torch.tanh(x)
+        # x = self.dropout(x)
         x = self.out_proj(x)
         return x
     
