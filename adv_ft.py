@@ -146,11 +146,11 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
                     val_progress_bar.update(1)
                     
                 # Decode the last batch
-                output_ids = torch.argmax(adv_output, dim=1).detach().cpu()
-                original_seq = tokenizer.batch_decode(input_ids.cpu())
-                pred_seq = tokenizer.batch_decode(output_ids)
-                for ref, pred in zip(original_seq, pred_seq):
-                    print(f"Original input: {ref} \nAdv output: {pred}")
+                # output_ids = torch.argmax(adv_output, dim=1).detach().cpu()
+                # original_seq = tokenizer.batch_decode(input_ids.cpu())
+                # pred_seq = tokenizer.batch_decode(output_ids)
+                # for ref, pred in zip(original_seq, pred_seq):
+                #     print(f"Original input: {ref} \nAdv output: {pred}")
 
             adv_val_loss /= step
             embedding_val_cls_loss /= step
