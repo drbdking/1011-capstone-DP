@@ -67,7 +67,19 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_dict['optimizer'].zero_grad()
             adv_train_loss += adv_loss.item()
 
+            train_progress_bar.update(1)
+
+        step = 0
+        train_progress_bar.refresh()
+        train_progress_bar.reset()
+
+        for batch in train_loader:
             # Train embedding
+            input_ids = batch['input_ids'].to(device)
+            token_type_ids = batch['token_type_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
+            
             # Mean pool the hidden states from Bert model and feed into classifier
             sentence_embedding = torch.mean(hidden_states, dim=1)
             cls_output = embedding_dict['classifier'](sentence_embedding)
