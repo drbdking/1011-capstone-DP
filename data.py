@@ -44,7 +44,7 @@ def load_data(tsv_path, train_batch_size, val_batch_size):
     val_dataset.set_format("torch")
     # tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
     # data_collator = DataCollatorWithPadding(tokenizer)
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
     return train_dataset, train_loader, val_dataset, val_loader
     
