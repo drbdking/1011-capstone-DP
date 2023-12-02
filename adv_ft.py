@@ -93,7 +93,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_output = torch.transpose(adv_output, 1, 2)
             adv_loss = adv_dict['loss_function'](adv_output, input_ids)
             cls_loss = embedding_dict['loss_function'](cls_output, label)
-            embedding_loss = cls_loss - 1.5 * adv_loss
+            embedding_loss = cls_loss - adv_loss
             embedding_loss.backward()
             embedding_dict['optimizer'].step()
             embedding_dict['optimizer'].zero_grad()
@@ -105,7 +105,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
         adv_train_loss /= step
         embedding_train_adv_loss /= step
         embedding_train_cls_loss /= step
-        print(f"epoch {epoch + 1} average adv train loss: {adv_train_loss:.4f}")
+        print(f"\nepoch {epoch + 1} average adv train loss: {adv_train_loss:.4f}")
         print(f"epoch {epoch + 1} average embedding train adv loss: {embedding_train_adv_loss:.4f}, average embedding train cls loss: {embedding_train_cls_loss:.4f}")
 
 
@@ -120,6 +120,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
 
             val_progress_bar.refresh()
             val_progress_bar.reset()
+
+            conf_mat = ConfusionMatrix(n_classes=2, device=device)
 
             with torch.no_grad():
                 for batch in val_loader:
@@ -141,6 +143,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
                     sentence_embedding = torch.mean(hidden_states, dim=1)
                     cls_output = embedding_dict['classifier'](sentence_embedding)
                     label = batch['label'].to(device)
+                    conf_mat += torch.argmax(cls_output, dim=1), label
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
                     embedding_val_cls_loss += cls_loss.item()
 
@@ -155,8 +158,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
 
             adv_val_loss /= step
             embedding_val_cls_loss /= step
-            print(f"epoch {epoch + 1} average val loss: {adv_val_loss:.4f}")
-            print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}")
+            tn, fn, fp, tp = conf_mat.value
+            print(f"\nepoch {epoch + 1} average val loss: {adv_val_loss:.4f}")
+            print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}, acc: {(tp+tn) / (tp + tn + fp + fn)}, f1 score: {2 * tp / (2 * tp + fp + fn)}, precision: {tp / (tp + fp)}")
 
     train_progress_bar.close()
     val_progress_bar.close()
