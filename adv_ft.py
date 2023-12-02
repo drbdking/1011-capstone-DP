@@ -79,7 +79,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_output = torch.transpose(adv_output, 1, 2)
             adv_loss = adv_dict['loss_function'](adv_output, input_ids)
             cls_loss = embedding_dict['loss_function'](cls_output, label)
-            emebdding_loss = cls_loss - 1.5 * adv_loss
+            # emebdding_loss = cls_loss - 1.5 * adv_loss
+            emebdding_loss = -adv_loss
             emebdding_loss.backward()
             embedding_dict['optimizer'].step()
             embedding_dict['optimizer'].zero_grad()
@@ -171,7 +172,7 @@ if __name__ == '__main__':
     cls_model = BinaryClassificationHead(input_size=bert_config.hidden_size)
     embedding_optimizer = torch.optim.Adam([
         {"params": bert_model.parameters(), "lr": 1e-5},
-        {"params": cls_model.parameters(), "lr": 5e-5},
+        {"params": cls_model.parameters(), "lr": 1e-5},
         ])
 
     embedding_dict = {
