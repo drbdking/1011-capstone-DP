@@ -78,6 +78,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             input_ids = batch['input_ids'].to(device)
             token_type_ids = batch['token_type_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
+            embeddings = embedding_dict['base_model'].embeddings(input_ids, token_type_ids)
             hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
             
             # Mean pool the hidden states from Bert model and feed into classifier
@@ -92,8 +93,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args):
             adv_loss = adv_dict['loss_function'](adv_output, input_ids)
             cls_loss = embedding_dict['loss_function'](cls_output, label)
             # emebdding_loss = cls_loss - 1.5 * adv_loss
-            emebdding_loss = -adv_loss
-            emebdding_loss.backward()
+            embedding_loss = -adv_loss
+            embedding_loss.backward()
             embedding_dict['optimizer'].step()
             embedding_dict['optimizer'].zero_grad()
             embedding_train_adv_loss += adv_loss.item()
