@@ -102,8 +102,8 @@ if __name__ == '__main__':
 
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-4)
-    parser.add_argument("--num_epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
 
     args = parser.parse_args()
@@ -118,8 +118,8 @@ if __name__ == '__main__':
     bert_model = BertModel.from_pretrained("bert-base-cased", config=bert_config)
     cls_model = BinaryClassificationHead(input_size=bert_config.hidden_size)
     embedding_optimizer = torch.optim.Adam([
-        {"params": bert_model.parameters(), "lr": 5e-6},
-        {"params": cls_model.parameters(), "lr": 5e-6},
+        {"params": bert_model.parameters(), "lr": 1e-5},
+        {"params": cls_model.parameters(), "lr": 1e-5},
         ])
 
     embedding_dict = {
