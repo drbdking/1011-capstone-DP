@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from transformers import BertTokenizer, BertForSequenceClassification, Trainer, TrainingArguments
 from datasets import Dataset, DatasetDict
 import torch
