@@ -136,7 +136,7 @@ class MultiSetInversionModel(nn.Module):
         # What is this? A record of word remained unpredicted?
         labels_t = torch.logical_and(labels_t, torch.logical_not(yt_one_hot))
         mask = labels_t.clone().to(torch.float32)
-        mask = mask - 0.0001
+        # mask = mask - 0.0001
         # print(f"labels_t: {labels_t.size()}")
 
         logits_train = logits
