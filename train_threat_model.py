@@ -33,8 +33,6 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
             sentence_embedding = batch['sentence_embedding'].to(device)
             aux_label = batch['aux_label'].to(device)
 
-            # Train embedding
-            # Mean pool the hidden states from Bert model and feed into classifier
             output, loss = model(sentence_embedding, aux_label)
             loss.backward()
             optimizer.step()
@@ -60,7 +58,6 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
             with torch.no_grad():
                 for batch in val_loader:
                     step += 1
-                    # Inference, everything can be reused
                     sentence_embedding = batch['sentence_embedding'].to(device)
                     aux_label = batch['aux_label'].to(device)
                     output, loss = model(sentence_embedding, aux_label)

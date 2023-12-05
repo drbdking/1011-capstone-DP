@@ -37,13 +37,10 @@ def load_data(tsv_path, train_batch_size, val_batch_size):
     qqp_dataset = qqp_dataset.shuffle()
     qqp_dataset = qqp_dataset.select(range(10000))
     qqp_dataset = qqp_dataset.map(tokenize_func, batched=True, load_from_cache_file=False)
-    # todo: consider dropping columns question1 and question2
     qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
     train_dataset.set_format("torch")
     val_dataset.set_format("torch")
-    # tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    # data_collator = DataCollatorWithPadding(tokenizer)
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
     return train_dataset, train_loader, val_dataset, val_loader

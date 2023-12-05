@@ -35,7 +35,7 @@ def remove_stopwords_punc(sentence):
 def preprocess_func_aux(input):
     # Batch processing is not implemented here due to potential variable length problem
     # Note: for convenience it is uncased
-    
+
     input['question1'] = remove_stopwords_punc(input['question1'])
     input['question2'] = remove_stopwords_punc(input['question2'])
 
