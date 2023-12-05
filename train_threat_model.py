@@ -69,6 +69,17 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
             val_loss /= step
             print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
 
+            # Visualize last batch
+            one_hot_labels = aux_label.cpu()[:10]
+            one_hot_predictions = output.cpu()[:10]
+            for one_hot_label, one_hot_prediction in zip(one_hot_labels, one_hot_predictions):
+                id_label = torch.where(one_hot_label == 1)[0]
+                id_pred = torch.where(one_hot_prediction == 1)[0]
+                decoded_label = aux_tokenizer.decode(id_label)
+                decoded_pred = aux_tokenizer.decode(id_pred)
+                print(f"Ground Truth Set: {decoded_label}, Pred Set: {decoded_pred}")
+
+
     train_progress_bar.close()
     val_progress_bar.close()
     return 
