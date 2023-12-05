@@ -103,7 +103,7 @@ class MultiSetInversionModel(nn.Module):
         init_input_t = xt
         init_states_t = states
         init_prediction_t = torch.zeros_like(labels, dtype=torch.bool, device=self.device)  # Initialize on GPU
-        init_loss_t = torch.zeros_like(labels, device=self.device)
+        init_loss_t = torch.zeros_like(labels, dtype=torch.float64, device=self.device)
 
         i = 0
         while i < self.steps:
