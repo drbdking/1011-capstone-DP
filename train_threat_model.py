@@ -45,7 +45,7 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
         training_loss /= step
 
-        print(f"epoch {epoch + 1} average embedding train cls loss: {training_loss:.4f}")
+        print(f"epoch {epoch + 1} train loss: {training_loss:.4f}")
 
 
         if (epoch + 1) % args.val_interval == 0:
@@ -67,7 +67,7 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
                     val_loss += loss
                     val_progress_bar.update(1)
             val_loss /= step
-            print(f"epoch {epoch + 1} average embedding val cls loss: {val_loss:.4f}")
+            print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
 
     train_progress_bar.close()
     val_progress_bar.close()
@@ -78,8 +78,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Arguments
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
-    parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--learning_rate", type=float, default=1e-3)
+    parser.add_argument("--num_epochs", type=int, default=50)
     parser.add_argument("--sample_size", type=int, default=5000)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     model.to(device)
 
     # Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
     # Train threat
     train_threat_model(train_loader, val_loader, model, optimizer, device, args)
