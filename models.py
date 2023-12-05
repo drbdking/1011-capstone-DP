@@ -75,3 +75,77 @@ class AdversarialDecoder(nn.Module):
         return output
 
 
+class MultiSetInversionModel(nn.Module):
+    def __init__(self, emb_dim, output_size, steps=32, drop_p=0.25, device="cpu"):
+        super(MultiSetInversionModel, self).__init__()
+        self.device = device
+        self.steps = steps
+        self.emb_dim = emb_dim
+        self.output_size = output_size
+        self.device = device
+   
+        # Initialize layers and move them to the GPU if available
+        self.fc1 = nn.Linear(emb_dim, emb_dim)  # on input
+        self.fc2 = nn.Linear(emb_dim, output_size)  # on output of lstm cell
+        self.policy = nn.LSTMCell(emb_dim, emb_dim)
+        self.dropout = nn.Dropout(drop_p)
+
+        # Initialize embedding  
+        self.embedding = nn.Embedding(output_size, emb_dim)
+
+    def forward(self, inputs, labels):
+        # labels should be bool
+        # Ensure inputs and labels are on the GPU if available
+        xt = self.fc1(inputs)
+        states=None
+        batch_size = labels.size(0)
+        init_labels_t = labels.clone()
+        init_input_t = xt
+        init_states_t = states
+        init_prediction_t = torch.zeros_like(labels, dtype=torch.bool, device=self.device)  # Initialize on GPU
+        init_loss_t = torch.zeros_like(labels, device=self.device)
+
+        i = 0
+        while i < self.steps:
+            i, init_labels_t, init_input_t, init_states_t, init_prediction_t, init_loss_t = \
+                self._inner_loop(i, init_labels_t, init_input_t, init_states_t, init_prediction_t, init_loss_t)
+            
+        final_loss = torch.mean(init_loss_t / self.steps)
+
+        return init_prediction_t, final_loss
+    
+    def _inner_loop(self, i, labels_t, input_t, states_t, prediction_t, loss_t):
+        # print(f"input_t: {input_t.size()}")
+        input_t = self.dropout(input_t)
+        states_t = self.policy(input_t, states_t)
+        # print(f"states_t: {states_t[0].size()}")
+        # Why matmul embedding? why not a linear layer?
+        logits = self.fc2(states_t[0])
+        # Add mask HERE?
+        # print(f"logits: {logits.size()}")
+
+        yt = torch.argmax(logits, dim=1)
+        # print(f"yt: {yt.size()}")
+
+        # Get embedding and record all predicted words
+        input_t = self.embedding(yt)  # The next input is the current output
+        yt_one_hot = F.one_hot(yt, num_classes=self.output_size).to(torch.bool)
+        prediction_t = torch.logical_or(yt_one_hot, prediction_t)
+        # print(f"prediction_t: {prediction_t.size()}")
+
+        # What is this? A record of word remained unpredicted?
+        labels_t = torch.logical_and(labels_t, torch.logical_not(yt_one_hot))
+        mask = labels_t.clone().to(torch.float32)
+        mask = mask - 0.0001
+        # print(f"labels_t: {labels_t.size()}")
+
+        logits_train = logits
+        # Mask
+        loss = -F.log_softmax(logits_train, dim=1) * mask
+        # One problem, cannot control the prob of other words masked 0
+        # Visualize the probs!
+        # Negative sampling can be added here (bonus)
+        loss_t += loss
+
+        return i + 1, labels_t, input_t, states_t, prediction_t, loss_t
+
