@@ -35,12 +35,16 @@ def remove_stopwords_punc(sentence):
 def preprocess_func_aux(input):
     # Batch processing is not implemented here due to potential variable length problem
     # Note: for convenience it is uncased
+    original_input_q1 = input['question1']
+    original_input_q2 = input['question2']
 
     input['question1'] = remove_stopwords_punc(input['question1'])
     input['question2'] = remove_stopwords_punc(input['question2'])
 
     # Get sentence embedding
     encoding = aux_tokenizer(input['question1'], input['question2'], truncation=True, add_special_tokens=False)  # Remove cls and sep
+    if not encoding['input_ids']:
+        print(original_input_q1, original_input_q2)
     input_ids = torch.Tensor(encoding['input_ids']).to(torch.int64).reshape(1, -1).to(device)
     token_type_ids = torch.Tensor(encoding['token_type_ids']).to(torch.int64).reshape(1, -1).to(device)
     attention_mask = torch.Tensor(encoding['attention_mask']).to(torch.int64).reshape(1, -1).to(device)
