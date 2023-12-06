@@ -40,7 +40,8 @@ def preprocess_func_aux(input):
 
     input['question1'] = remove_stopwords_punc(input['question1'])
     input['question2'] = remove_stopwords_punc(input['question2'])
-
+    if input['question1'] == "" and input['question2'] == "":
+        return
     # Get sentence embedding
     encoding = aux_tokenizer(input['question1'], input['question2'], truncation=True, add_special_tokens=False)  # Remove cls and sep
     if not encoding['input_ids']:
