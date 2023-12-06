@@ -53,6 +53,8 @@ def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
     qqp_dataset = Dataset.from_dict(data)
     qqp_dataset = qqp_dataset.shuffle()
     qqp_dataset = qqp_dataset.select(range(sample_size))
+    # Add filter
+    qqp_dataset = qqp_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
     qqp_dataset = qqp_dataset.map(preprocess_func_aux, load_from_cache_file=False)
     qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
 
