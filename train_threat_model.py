@@ -11,6 +11,13 @@ from data import *
 from models import *
 
 
+def get_tp_fp_fn_metrics(pred, labels):
+    tp = torch.sum((pred == 1) & (labels == 1))
+    fp = torch.sum((pred == 1) & (labels == 0))
+    fn = torch.sum((pred == 0) & (labels == 1))
+    return tp.item(), fp.item(), fn.item()
+
+
 def train_threat_model(train_loader, val_loader, model, optimizer, device, args):
     model.to(device)
     train_progress_bar = tqdm(range(len(train_loader)))
@@ -48,7 +55,7 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
         if (epoch + 1) % args.val_interval == 0:
             step = 0
-            val_loss = 0
+            tp_total, fp_total, fn_total, val_loss = 0, 0, 0, 0
             
             model.eval()
 
@@ -64,9 +71,22 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
                     val_loss += loss
                     val_progress_bar.update(1)
             val_loss /= step
-            print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
 
-            # Visualize last batch
+            # Calculate evaluation metrics on the last batch
+            one_hot_labels = aux_label.cpu()
+            one_hot_predictions = output.cpu()
+            for one_hot_label, one_hot_prediction in zip(one_hot_labels, one_hot_predictions):
+                tp, fp, fn = get_tp_fp_fn_metrics(one_hot_prediction, one_hot_label)
+                tp_total += tp
+                fp_total += fp
+                fn_total += fn
+            precision = tp_total / (tp_total + fp_total)
+            recall = tp_total / (tp_total + fn_total)
+            f1 = 2 * precision * recall / (precision + recall)
+
+            print(f"epoch {epoch + 1}, val loss: {val_loss:.4f}, val precision: {precision:.4f}, val recall: {recall:.4f}, val f1: {f1:.4f}")
+
+            # Visualize last batch using 10 examples
             one_hot_labels = aux_label.cpu()[:10]
             one_hot_predictions = output.cpu()[:10]
             for one_hot_label, one_hot_prediction in zip(one_hot_labels, one_hot_predictions):
@@ -91,6 +111,7 @@ if __name__ == '__main__':
     parser.add_argument("--sample_size", type=int, default=5000)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
+    parser.add_argument("--mask_magnitude", type=float, default=0)
 
     args = parser.parse_args()
 
@@ -101,7 +122,7 @@ if __name__ == '__main__':
 
     # Model
     model = MultiSetInversionModel(emb_dim=bert_aux_config.hidden_size, output_size=bert_aux_config.vocab_size, 
-                                   steps=32, device=device)
+                                   steps=32, device=device, mask_magnitude=args.mask_magnitude)
     model.to(device)
 
     # Optimizer

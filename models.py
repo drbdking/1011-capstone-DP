@@ -1,139 +1,134 @@
-'''
-Models for adversarial fine-tuning.
-'''
-import math
+"""Script for adversarial fine-tuning.
+"""
+import argparse
 
 import torch
-import torch.utils.checkpoint
 from torch import nn
-from torch.nn import functional as F
-from transformers import BertModel
+from tqdm.auto import tqdm
+
+from utils import *
+from data import *
+from models import *
 
 
-def get_seq_len(src, batch_first):
-    if src.is_nested:
-        return None
-    else:
-        src_size = src.size()
-        if len(src_size) == 2:
-            # unbatched: S, E
-            return src_size[0]
-        else:
-            # batched: B, S, E if batch_first else S, B, E
-            seq_len_pos = 1 if batch_first else 0
-            return src_size[seq_len_pos]
-    
-class BinaryClassificationHead(nn.Module):
-    """Refer to Roberta classification head, since we are not using the pooling layer from Bert
-
-    Args:
-        nn (_type_): _description_
-    """
-    def __init__(self, input_size):
-        super().__init__()
-        self.dense = nn.Linear(input_size, input_size)
-        self.dropout = nn.Dropout(0.2)
-        self.out_proj = nn.Linear(input_size, 2)
-
-    def forward(self, features):  
-        x = self.dropout(features) # should be hidden state after mean pooling
-        # x = self.dense(x)
-        # x = torch.tanh(x)
-        # x = self.dropout(x)
-        x = self.out_proj(x)
-        return x
-    
-class AdversarialDecoder(nn.Module):
-    """Transformer decoder adversary
-
-    Args:
-        nn (_type_): _description_
-    """
-    # torch 2.1 has bias in decoder layer and layer norm
-    # torch 2.1 has tgt_is_causal
-    def __init__(self, d_model=768, nhead=12, num_decoder_layers=2, dim_feedforward=256,
-                 tgt_vocab_size=10000,
-                 dropout=0.1, activation=F.relu, layer_norm_eps=1e-5,
-                 batch_first=True, norm_first=False, device=None, dtype=None):
-        super(AdversarialDecoder, self).__init__()
-        # All you need from Bert is the vocab_size
-        self.device = device
-        decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, 
-                                                   activation, layer_norm_eps, batch_first, 
-                                                   norm_first)
-        decoder_norm = nn.LayerNorm(d_model, eps=layer_norm_eps)
-        self.decoder = nn.TransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm)
-        self.generator = nn.Linear(d_model, tgt_vocab_size)
-
-    def forward(self, tgt, memory):
-        # The input tgt should be Bert embedding from the lowest layer
-        mask_1 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(tgt, batch_first=True)).to(self.device)
-        # mask_2 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(memory, batch_first=True)).to(self.device)
-        output = self.decoder(tgt, memory, tgt_mask=mask_1)
-        # Map to vocab size
-        output = self.generator(output)
-        return output
+def get_tp_fp_fn_metrics(pred, labels):
+    tp = torch.sum((pred == 1) & (labels == 1))
+    fp = torch.sum((pred == 1) & (labels == 0))
+    fn = torch.sum((pred == 0) & (labels == 1))
+    return tp.item(), fp.item(), fn.item()
 
 
-class MultiSetInversionModel(nn.Module):
-    def __init__(self, emb_dim, output_size, steps=32, drop_p=0.25, device="cpu"):
-        super(MultiSetInversionModel, self).__init__()
-        self.device = device
-        self.steps = steps
-        self.emb_dim = emb_dim
-        self.output_size = output_size
-        self.device = device
-   
-        # Initialize layers and move them to the GPU if available
-        self.fc1 = nn.Linear(emb_dim, emb_dim)  # on input
-        self.fc2 = nn.Linear(emb_dim, output_size)  # on output of lstm cell
-        self.policy = nn.LSTMCell(emb_dim, emb_dim)
-        self.dropout = nn.Dropout(drop_p)
+def train_threat_model(train_loader, val_loader, model, optimizer, device, args):
+    model.to(device)
+    train_progress_bar = tqdm(range(len(train_loader)))
+    val_progress_bar = tqdm(range(len(val_loader)))
 
-        # Initialize embedding  
-        self.embedding = nn.Embedding(output_size, emb_dim)
+    for epoch in range(args.num_epochs):
+        print("-" * 10)
+        print(f"epoch {epoch + 1}/{args.num_epochs}")
+        
+        step = 0
+        training_loss = 0
+        model.train()
+        
+        train_progress_bar.refresh()
+        train_progress_bar.reset()
 
-    def forward(self, inputs, labels):
-        # Labels should be bool
-        xt = self.fc1(inputs)
-        states=None
-        batch_size = labels.size(0)
-        init_labels_t = labels.clone()
-        init_input_t = xt
-        init_states_t = states
-        init_prediction_t = torch.zeros_like(labels, dtype=torch.bool, device=self.device)  
-        init_loss_t = torch.zeros_like(labels, dtype=torch.float64, device=self.device)
+        for batch in train_loader:
+            step += 1
+        
+            sentence_embedding = batch['sentence_embedding'].to(device)
+            aux_label = batch['aux_label'].to(device)
 
-        i = 0
-        while i < self.steps:
-            i, init_labels_t, init_input_t, init_states_t, init_prediction_t, init_loss_t = \
-                self._inner_loop(i, init_labels_t, init_input_t, init_states_t, init_prediction_t, init_loss_t)
+            output, loss = model(sentence_embedding, aux_label)
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            training_loss += loss
+
+            train_progress_bar.update(1)
+
+        training_loss /= step
+
+        print(f"epoch {epoch + 1} train loss: {training_loss:.4f}")
+
+
+        if (epoch + 1) % args.val_interval == 0:
+            step = 0
+            tp_total, fp_total, fn_total, val_loss = 0, 0, 0, 0
             
-        final_loss = torch.mean(init_loss_t / self.steps)
+            model.eval()
 
-        return init_prediction_t, final_loss
+            val_progress_bar.refresh()
+            val_progress_bar.reset()
+
+            with torch.no_grad():
+                for batch in val_loader:
+                    step += 1
+                    sentence_embedding = batch['sentence_embedding'].to(device)
+                    aux_label = batch['aux_label'].to(device)
+                    output, loss = model(sentence_embedding, aux_label)
+                    val_loss += loss
+                    val_progress_bar.update(1)
+            val_loss /= step
+
+            # Calculate evaluation metrics on the last batch
+            one_hot_labels = aux_label.cpu()
+            one_hot_predictions = output.cpu()
+            for one_hot_label, one_hot_prediction in zip(one_hot_labels, one_hot_predictions):
+                tp, fp, fn = get_tp_fp_fn_metrics(one_hot_prediction, one_hot_label)
+                tp_total += tp
+                fp_total += fp
+                fn_total += fn
+            precision = tp_total / (tp_total + fp_total)
+            recall = tp_total / (tp_total + fn_total)
+            f1 = 2 * precision * recall / (precision + recall)
+
+            print(f"epoch {epoch + 1}, val loss: {val_loss:.4f}, val precision: {precision:.4f}, val recall: {recall:.4f}, val f1: {f1:.4f}")
+
+            # Visualize last batch using 10 examples
+            one_hot_labels = aux_label.cpu()[:10]
+            one_hot_predictions = output.cpu()[:10]
+            for one_hot_label, one_hot_prediction in zip(one_hot_labels, one_hot_predictions):
+                id_label = torch.where(one_hot_label == 1)[0]
+                id_pred = torch.where(one_hot_prediction == 1)[0]
+                decoded_label = aux_tokenizer.decode(id_label)
+                decoded_pred = aux_tokenizer.decode(id_pred)
+                print(f"Ground Truth Set: {decoded_label}, Pred Set: {decoded_pred}")
+
+
+    train_progress_bar.close()
+    val_progress_bar.close()
+    return 
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    # Arguments
+    parser.add_argument("--learning_rate", type=float, default=1e-3)
+    parser.add_argument("--num_epochs", type=int, default=50)
+    parser.add_argument("--sample_size", type=int, default=5000)
+    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--val_interval", type=int, default=1)
+    parser.add_argument("--mask_magnitude", type=float, default=0)
+
+    args = parser.parse_args()
+
+    train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/quora_duplicate_questions.tsv", args.sample_size, args.batch_size, args.batch_size)
     
-    def _inner_loop(self, i, labels_t, input_t, states_t, prediction_t, loss_t):
-        input_t = self.dropout(input_t)
-        states_t = self.policy(input_t, states_t)
-        logits = self.fc2(states_t[0])
+    # Device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        yt = torch.argmax(logits, dim=1)
+    # Model
+    model = MultiSetInversionModel(emb_dim=bert_aux_config.hidden_size, output_size=bert_aux_config.vocab_size, 
+                                   steps=32, device=device, mask_magnitude=args.mask_magnitude)
+    model.to(device)
 
-        # Get embedding and record all predicted words
-        input_t = self.embedding(yt) 
-        yt_one_hot = F.one_hot(yt, num_classes=self.output_size).to(torch.bool)
-        prediction_t = torch.logical_or(yt_one_hot, prediction_t)
+    # Optimizer
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-        # A record of word remained unpredicted
-        labels_t = torch.logical_and(labels_t, torch.logical_not(yt_one_hot))
-        # Did nothing here
-        mask = labels_t.clone().to(torch.float32)
+    # Train threat
+    train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
-        logits_train = logits
-        # Mask
-        loss = -F.log_softmax(logits_train, dim=1) * mask
-        loss_t += loss
-
-        return i + 1, labels_t, input_t, states_t, prediction_t, loss_t
 
