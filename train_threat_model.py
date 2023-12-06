@@ -94,7 +94,9 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
                 id_pred = torch.where(one_hot_prediction == 1)[0]
                 decoded_label = aux_tokenizer.decode(id_label)
                 decoded_pred = aux_tokenizer.decode(id_pred)
-                print(f"Ground Truth Set: {decoded_label}, Pred Set: {decoded_pred}")
+                print(f"Ground Truth Set: {decoded_label}")
+                print(f"Prediction Set: {decoded_pred}")
+                print("----------")
 
 
     train_progress_bar.close()
@@ -128,7 +130,9 @@ if __name__ == '__main__':
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    # Train threat
+    # Train threat model
     train_threat_model(train_loader, val_loader, model, optimizer, device, args)
+
+    # Test threat model
 
 
