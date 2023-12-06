@@ -128,7 +128,9 @@ if __name__ == '__main__':
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
-    # Train threat
+    # Train threat model
     train_threat_model(train_loader, val_loader, model, optimizer, device, args)
+
+    # Test threat model
 
 
