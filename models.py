@@ -129,7 +129,7 @@ class MultiSetInversionModel(nn.Module):
         labels_t = torch.logical_and(labels_t, torch.logical_not(yt_one_hot))
         # Did nothing here
         mask = labels_t.clone().to(torch.float32)
-        mask -= 1e-8
+        mask -= 1e-10
 
         logits_train = logits
         # Mask
