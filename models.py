@@ -128,8 +128,8 @@ class MultiSetInversionModel(nn.Module):
         # A record of word remained unpredicted
         labels_t = torch.logical_and(labels_t, torch.logical_not(yt_one_hot))
         # Did nothing here
-        mask = labels_t.clone().to(torch.float32)
-        mask -= 1e-15
+        mask = labels_t.clone().to(torch.float32) - F.dropout2d(torch.ones_like(labels_t), 0.9) * 0.01
+
 
         logits_train = logits
         # Mask
