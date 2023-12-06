@@ -30,7 +30,7 @@ def tokenize_func(input):
 
 def remove_stopwords_punc(sentence):
     t = filter(lambda x: x.lower() not in stop_words, sentence.split(' '))
-    return ' '.join(map(lambda x: x.strip(string.punctuation), t))
+    return ' '.join(map(lambda x: x.strip(string.punctuation), t)) if list(t) else sentence
 
 def preprocess_func_aux(input):
     # Batch processing is not implemented here due to potential variable length problem
