@@ -70,6 +70,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     adv_dict['optimizer'].zero_grad()
                     adv_train_loss += adv_loss.item()
 
+
                 # Train embedding
                 # Mean pool the hidden states from Bert model and feed into classifier
                 sentence_embedding = torch.mean(hidden_states, dim=1)
@@ -84,7 +85,6 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 cls_loss = embedding_dict['loss_function'](cls_output, label)
                 emebdding_loss = cls_loss - args.alpha * adv_loss
                 # emebdding_loss = cls_loss - 1.5 * adv_loss
-                emebdding_loss = -adv_loss
                 emebdding_loss.backward()
                 embedding_dict['optimizer'].step()
                 embedding_dict['optimizer'].zero_grad()
