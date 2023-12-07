@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=fine_tune
+#SBATCH --job-name=adv_fine_tune
 #SBATCH --account=ds_ga_1011-2023fa
 #SBATCH --partition=n1s8-v100-1
 #SBATCH --open-mode=append
@@ -16,5 +16,5 @@ source /ext3/env.sh
 conda activate 2590-hw3
 cd /scratch/dc5116/1011-capstone-DP
 git pull
-bash ./scripts/fine_tune.sh
+bash ./scripts/adv_fine_tune.sh
 "
