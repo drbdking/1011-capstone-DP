@@ -66,6 +66,7 @@ def train_embedding(train_loader, val_loader, embedding_dict, device, args):
         if (epoch + 1) % args.val_interval == 0:
             step = 0
             embedding_val_cls_loss = 0
+            conf_mat = ConfusionMatrix(n_classes=2, device=device)
             
             embedding_dict['base_model'].eval()
             embedding_dict['classifier'].eval()
@@ -85,12 +86,14 @@ def train_embedding(train_loader, val_loader, embedding_dict, device, args):
                     # sentence_embedding = hidden_states
                     cls_output = embedding_dict['classifier'](sentence_embedding)
                     label = batch['label'].to(device)
+                    conf_mat += torch.argmax(cls_output, dim=1), label
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
                     embedding_val_cls_loss += cls_loss.item()
                     val_progress_bar.update(1)
                     
             embedding_val_cls_loss /= step
-            print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}")
+            tn, fn, fp, tp = conf_mat.value
+            print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}, acc: {(tp+tn) / (tp + tn + fp + fn)}, f1 score: {2 * tp / (2 * tp + fp + fn)}, precision: {tp / (tp + fp)}")
 
     train_progress_bar.close()
     val_progress_bar.close()
@@ -102,7 +105,7 @@ if __name__ == '__main__':
 
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-5)
-    parser.add_argument("--num_epochs", type=int, default=3)
+    parser.add_argument("--num_epochs", type=int, default=8)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
 
