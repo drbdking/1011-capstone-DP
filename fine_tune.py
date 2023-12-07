@@ -1,6 +1,8 @@
 """Script for adversarial fine-tuning.
 """
 import argparse
+from collections import defaultdict
+import json
 
 from transformers import AutoTokenizer
 from transformers import AutoConfig
@@ -14,7 +16,7 @@ from data import *
 from models import *
 
 
-def train_embedding(train_loader, val_loader, embedding_dict, device, args):
+def train_embedding(train_loader, val_loader, embedding_dict, record, device, args):
     # A few thoughts about tunable hyperparameters:
     # separate learning rate and num of training epochs for each model (classification, embedding, adversary)
     # The input (tgt) of adversary is the embedding / hidden_states[0] from Bert, the label is a tensor of input token ids
@@ -61,6 +63,7 @@ def train_embedding(train_loader, val_loader, embedding_dict, device, args):
         embedding_train_cls_loss /= step
 
         print(f"epoch {epoch + 1} average embedding train cls loss: {embedding_train_cls_loss:.4f}")
+        record['train_cls_loss'].append(embedding_train_cls_loss)
 
 
         if (epoch + 1) % args.val_interval == 0:
@@ -93,11 +96,18 @@ def train_embedding(train_loader, val_loader, embedding_dict, device, args):
                     
             embedding_val_cls_loss /= step
             tn, fn, fp, tp = conf_mat.value
-            print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}, acc: {(tp+tn) / (tp + tn + fp + fn)}, f1 score: {2 * tp / (2 * tp + fp + fn)}, precision: {tp / (tp + fp)}")
+            acc = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) != 0 else 0
+            f1_score = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) != 0 else 0
+            precision = tp / (tp + fp) if (tp + fp) != 0 else 0
+            print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}, acc: {acc}, f1 score: {f1_score}, precision: {precision}")
+            record['val_cls_loss'].append(embedding_val_cls_loss)
+            record['acc'].append(acc)
+            record['f1_score'].append(f1_score)
+            record['precision'].append(precision)
 
     train_progress_bar.close()
     val_progress_bar.close()
-    return 
+    return record
 
 
 if __name__ == '__main__':
@@ -122,8 +132,8 @@ if __name__ == '__main__':
     bert_model = BertModel.from_pretrained("bert-base-cased", config=bert_config)
     cls_model = BinaryClassificationHead(input_size=bert_config.hidden_size)
     embedding_optimizer = torch.optim.Adam([
-        {"params": bert_model.parameters(), "lr": 1e-5},
-        {"params": cls_model.parameters(), "lr": 1e-5},
+        {"params": bert_model.parameters(), "lr": args.learning_rate},
+        {"params": cls_model.parameters(), "lr": args.learning_rate},
         ])
 
     embedding_dict = {
@@ -133,6 +143,13 @@ if __name__ == '__main__':
         'optimizer': embedding_optimizer
     }
 
-    train_embedding(train_loader, val_loader, embedding_dict, device, args)
+    # Dict storing results
+    record = defaultdict(list)
+
+    record = train_embedding(train_loader, val_loader, embedding_dict, record, device, args)
+
+    # Save result, overwrite
+    with open("output/ft_" + "_".join([str(args.downsample), str(args.num_epochs), str(args.learning_rate)]) + ".json", 'w') as fp:
+        json.dump(record, fp)
 
 

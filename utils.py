@@ -54,7 +54,6 @@ def preprocess_func_aux(input):
     input['aux_label'] = aux_label.to(torch.bool)
     return input
 
-
 class ConfusionMatrix:
     def __init__(self, n_classes, device):
         self._matrix = torch.zeros(n_classes * n_classes).to(device)
