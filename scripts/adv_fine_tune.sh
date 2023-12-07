@@ -1,6 +1,6 @@
 #!/bin/bash
-for lr in 0.00005 0.00001 0.000005
+for alpha in 0.5 0.8 
 do
-    echo "-------------------- fine-tuning, learning rate = $lr ---------------------";
-    python fine_tune.py --downsample 0.25 --num_epochs 5 --learning_rate $lr
+    echo "-------------------- fine-tuning, alpha = $alpha ---------------------";
+    python adv_ft.py --downsample 0.25 --adv_mode 0 --num_epochs 5 --alpha $alpha
 done
