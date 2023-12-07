@@ -184,8 +184,8 @@ if __name__ == '__main__':
     device = torch.device("cuda:0")
 
     # Bert Model
-    bert_config = BertConfig.from_pretrained("bert-base-cased", output_hidden_states=True)
-    bert_model = BertModel.from_pretrained("bert-base-cased", config=bert_config)
+    bert_config = BertConfig.from_pretrained("bert-base-uncased", output_hidden_states=True)
+    bert_model = BertModel.from_pretrained("bert-base-uncased", config=bert_config)
     cls_model = BinaryClassificationHead(input_size=bert_config.hidden_size)
     embedding_optimizer = torch.optim.Adam([
         {"params": bert_model.parameters(), "lr": 1e-5},
