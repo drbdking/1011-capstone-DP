@@ -101,14 +101,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Arguments
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
+    parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--num_epochs", type=int, default=3)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
 
     args = parser.parse_args()
 
-    train_dataset, train_loader, val_dataset, val_loader = load_data("data/quora_duplicate_questions.tsv", args.batch_size, args.batch_size)
+    train_dataset, train_loader, val_dataset, val_loader = load_data("data/qqp_embedding_train.tsv", args.batch_size, args.batch_size)
     
     # Device
     device = torch.device("cuda:0")
@@ -128,8 +128,6 @@ if __name__ == '__main__':
         'loss_function': nn.CrossEntropyLoss(),
         'optimizer': embedding_optimizer
     }
-
-
 
     train_embedding(train_loader, val_loader, embedding_dict, device, args)
 

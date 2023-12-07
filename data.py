@@ -35,7 +35,7 @@ def load_data(tsv_path, train_batch_size, val_batch_size):
             'label': df['is_duplicate'].tolist()}
     qqp_dataset = Dataset.from_dict(data)
     qqp_dataset = qqp_dataset.shuffle()
-    qqp_dataset = qqp_dataset.select(range(10000))
+    # qqp_dataset = qqp_dataset.select(range(10000))
     qqp_dataset = qqp_dataset.map(tokenize_func, batched=True, load_from_cache_file=False)
     qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
