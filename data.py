@@ -45,23 +45,24 @@ def load_data(tsv_path, downsample=0.25, train_batch_size=32, val_batch_size=32)
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
     return train_dataset, train_loader, val_dataset, val_loader
 
-def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
-    df = pd.read_csv(tsv_path, sep = '\t')
-    data = {'question1': df['question1'].astype(str).tolist(), 
-            'question2': df['question2'].astype(str).tolist(), 
-            }
-    qqp_dataset = Dataset.from_dict(data)
-    qqp_dataset = qqp_dataset.shuffle()
-    qqp_dataset = qqp_dataset.select(range(sample_size))
-    # Add filter
-    qqp_dataset = qqp_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
-    qqp_dataset = qqp_dataset.map(preprocess_func_aux, load_from_cache_file=False)
-    qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
+# def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
 
-    train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
-    train_dataset.set_format("torch")
-    val_dataset.set_format("torch")
+#     df = pd.read_csv(tsv_path, sep = '\t')
+#     data = {'question1': df['question1'].astype(str).tolist(), 
+#             'question2': df['question2'].astype(str).tolist(), 
+#             }
+#     qqp_dataset = Dataset.from_dict(data)
+#     qqp_dataset = qqp_dataset.shuffle()
+#     qqp_dataset = qqp_dataset.select(range(sample_size))
+#     # Add filter
+#     qqp_dataset = qqp_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
+#     qqp_dataset = qqp_dataset.map(preprocess_func_aux, load_from_cache_file=False)
+#     qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
 
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
-    return train_dataset, train_loader, val_dataset, val_loader
+#     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
+#     train_dataset.set_format("torch")
+#     val_dataset.set_format("torch")
+
+#     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True)
+#     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
+#     return train_dataset, train_loader, val_dataset, val_loader
