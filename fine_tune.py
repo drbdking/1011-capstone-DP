@@ -16,7 +16,7 @@ from data import *
 from models import *
 
 
-def train_embedding(train_loader, val_loader, embedding_dict, record, device, args):
+def train_embedding(train_loader, val_loader, embedding_dict, recorder, device, args):
     # A few thoughts about tunable hyperparameters:
     # separate learning rate and num of training epochs for each model (classification, embedding, adversary)
     # The input (tgt) of adversary is the embedding / hidden_states[0] from Bert, the label is a tensor of input token ids
@@ -63,7 +63,7 @@ def train_embedding(train_loader, val_loader, embedding_dict, record, device, ar
         embedding_train_cls_loss /= step
 
         print(f"epoch {epoch + 1} average embedding train cls loss: {embedding_train_cls_loss:.4f}")
-        record['train_cls_loss'].append(embedding_train_cls_loss)
+        recorder['train_cls_loss'] = embedding_train_cls_loss
 
 
         if (epoch + 1) % args.val_interval == 0:
@@ -100,25 +100,26 @@ def train_embedding(train_loader, val_loader, embedding_dict, record, device, ar
             f1_score = 2 * tp / (2 * tp + fp + fn) if (2 * tp + fp + fn) != 0 else 0
             precision = tp / (tp + fp) if (tp + fp) != 0 else 0
             print(f"epoch {epoch + 1} average embedding val cls loss: {embedding_val_cls_loss:.4f}, acc: {acc}, f1 score: {f1_score}, precision: {precision}")
-            record['val_cls_loss'].append(embedding_val_cls_loss)
-            record['acc'].append(acc)
-            record['f1_score'].append(f1_score)
-            record['precision'].append(precision)
+            recorder['val_cls_loss'] = embedding_val_cls_loss
+            recorder['acc'] = acc
+            recorder['f1_score'] = f1_score
+            recorder['precision'] = precision
 
     train_progress_bar.close()
     val_progress_bar.close()
-    return record
+    return recorder
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     # Arguments
-    parser.add_argument("--learning_rate", type=float, default=1e-5)
-    parser.add_argument("--num_epochs", type=int, default=8)
-    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--downsample", type=float, default=0.25)
+    parser.add_argument("--num_epochs", type=int, default=8)
+    parser.add_argument("--learning_rate", type=float, default=1e-5)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
+    parser.add_argument("--output_dir", type=str, default="output/")
 
     args = parser.parse_args()
 
@@ -144,12 +145,11 @@ if __name__ == '__main__':
     }
 
     # Dict storing results
-    record = defaultdict(list)
+    recorder = ResultRecorder(train_mode="ft", params=[args.downsample, args.num_epochs, args.learning_rate])
 
-    record = train_embedding(train_loader, val_loader, embedding_dict, record, device, args)
+    recorder = train_embedding(train_loader, val_loader, embedding_dict, recorder, device, args)
 
     # Save result, overwrite
-    with open("output/ft_" + "_".join([str(args.downsample), str(args.num_epochs), str(args.learning_rate)]) + ".json", 'w') as fp:
-        json.dump(record, fp)
+    recorder.save(output_dir=args.output_dir)
 
 

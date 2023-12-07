@@ -1,6 +1,8 @@
 """Split dataset, load and process data
 """
 import string
+import json
+from collections import defaultdict
 
 
 import torch
@@ -76,3 +78,20 @@ class ConfusionMatrix:
     @property
     def value(self):
         return self._matrix.cpu().tolist()
+    
+class ResultRecorder(object):
+    def __init__(self, train_mode, params) -> None:
+        self.record = defaultdict(list)
+        self.train_mode = train_mode
+        self.params = [str(x) for x in params]
+
+    def __setitem__(self, key, value):
+        self.record[key].append(value)
+
+    def save(self, output_dir):
+        with open(output_dir + self.train_mode + "_" + "_".join(self.params) + ".json", "w") as fp:
+            json.dump(self.record, fp)
+
+
+    
+
