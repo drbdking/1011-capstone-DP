@@ -106,12 +106,13 @@ if __name__ == '__main__':
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--num_epochs", type=int, default=8)
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--downsample", type=float, default=0.25)
     parser.add_argument("--val_interval", type=int, default=1)
 
     args = parser.parse_args()
 
-    train_dataset, train_loader, val_dataset, val_loader = load_data("data/qqp_embedding_train.tsv", args.batch_size, args.batch_size)
+    train_dataset, train_loader, val_dataset, val_loader = load_data("data/qqp_embedding_train.tsv", args.downsample, args.batch_size, args.batch_size)
     
     # Device
     device = torch.device("cuda:0")
