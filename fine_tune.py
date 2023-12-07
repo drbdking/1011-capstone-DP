@@ -106,7 +106,7 @@ if __name__ == '__main__':
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--num_epochs", type=int, default=8)
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--downsample", type=float, default=0.25)
     parser.add_argument("--val_interval", type=int, default=1)
 
