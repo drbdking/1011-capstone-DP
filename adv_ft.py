@@ -250,7 +250,7 @@ if __name__ == '__main__':
     parser.add_argument("--adv_learning_rate", type=float, default=1e-5)
     parser.add_argument("--alpha", type=float, default=1.0)
     parser.add_argument("--adv_interval", type=int, default=1)
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--val_interval", type=int, default=1)
     parser.add_argument("--output_dir", type=str, default="output/")
 
