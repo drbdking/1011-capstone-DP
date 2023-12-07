@@ -235,7 +235,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
 
     train_progress_bar.close()
     val_progress_bar.close()
-    
+
     return recorder
 
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
     }
     recorder = ResultRecorder(train_mode="adv_ft", params=[args.downsample, args.adv_mode, args.num_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval])
 
-    recorder = train_adv(train_loader, val_loader, adv_dict, embedding_dict, device, args)
+    recorder = train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, device, args)
 
     recorder.save(output_dir=args.output_dir)
 
