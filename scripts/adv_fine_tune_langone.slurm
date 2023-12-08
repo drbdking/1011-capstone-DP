@@ -5,6 +5,7 @@
 #SBATCH --time=0-20:00:00
 #SBATCH --gres=gpu:a100:1
 #SBATCH --job-name adv_ft
+#SBATCH --open-mode=append
 #SBATCH --output /gpfs/scratch/changd14/1011-capstone-DP/output/slurm_output/adv_ft-%J.log 
 
 module load singularity/3.1
@@ -15,5 +16,5 @@ export PATH=/ext3/miniconda3/bin:$PATH
 conda activate 2590-hw3
 cd /gpfs/scratch/changd14/1011-capstone-DP
 git pull
-python adv_ft.py --downsample 0.25 --adv_mode 0 --num_epochs 5 --alpha "$1" --batch_size 64 --learning_rate "$2"
+python adv_ft.py --downsample 0.25 --adv_mode 0 --num_epochs 5 --alpha $1 --batch_size 64 --learning_rate $2
 "
