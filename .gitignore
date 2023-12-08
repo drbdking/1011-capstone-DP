@@ -134,6 +134,9 @@ data/
 # Output
 output/
 
+# Model
+model/
+
 # Spyder project settings
 .spyderproject
 .spyproject

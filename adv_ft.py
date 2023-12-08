@@ -19,11 +19,16 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
     # separate learning rate and num of training epochs for each model (classification, embedding, adversary)
     # The input (tgt) of adversary is the embedding / hidden_states[0] from Bert, the label is a tensor of input token ids
     # epoch iteration
+    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]
+    param_lst = [str(x) for x in param_lst]
+
     adv_dict['model'].to(device)
     embedding_dict['base_model'].to(device)
     embedding_dict['classifier'].to(device)
-    train_progress_bar = tqdm(range(len(train_loader)))
-    val_progress_bar = tqdm(range(len(val_loader)))
+    total_train_step = len(train_loader)
+    total_val_step = len(val_loader)
+    # train_progress_bar = tqdm(range(len(train_loader)))
+    # val_progress_bar = tqdm(range(len(val_loader)))
 
     for epoch in range(args.num_epochs):
         print("-" * 10)
@@ -37,14 +42,16 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
         embedding_dict['base_model'].train()
         embedding_dict['classifier'].train()
         
-        train_progress_bar.refresh()
-        train_progress_bar.reset()
+        # train_progress_bar.refresh()
+        # train_progress_bar.reset()
 
         if args.adv_mode == 0:
             # This is the common practice of adversarial training, for each mini-batch
             # we first train adv model and then embedding model
             for batch in train_loader:
                 step += 1
+                if step % 20:
+                    print(f"Train step: {step} / {total_train_step}")
                 # Train adv, get embedding (no grad), hidden state and label (input token ids)
                 # Zero grad to eliminate embedding model training gradient 
                 adv_dict['optimizer'].zero_grad()
@@ -90,7 +97,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 embedding_dict['optimizer'].zero_grad()
                 embedding_train_adv_loss += adv_loss.item()
                 embedding_train_cls_loss += cls_loss.item()
-                train_progress_bar.update(1)
+                # train_progress_bar.update(1)
 
         elif args.adv_mode == 1:
             # In this training mode, we train adv and embedding separately
@@ -124,11 +131,11 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 adv_dict['optimizer'].zero_grad()
                 adv_train_loss += adv_loss.item()
 
-                train_progress_bar.update(1)
+                # train_progress_bar.update(1)
 
             step = 0
-            train_progress_bar.refresh()
-            train_progress_bar.reset()
+            # train_progress_bar.refresh()
+            # train_progress_bar.reset()
 
             for batch in train_loader:
                 # Train embedding
@@ -157,7 +164,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 embedding_train_adv_loss += adv_loss.item()
                 embedding_train_cls_loss += cls_loss.item()
 
-                train_progress_bar.update(1)
+                # train_progress_bar.update(1)
 
         # Adapt to interval
         adv_train_loss /= (step / args.adv_interval)
@@ -181,14 +188,16 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             embedding_dict['base_model'].eval()
             embedding_dict['classifier'].eval()
 
-            val_progress_bar.refresh()
-            val_progress_bar.reset()
+            # val_progress_bar.refresh()
+            # val_progress_bar.reset()
 
             conf_mat = ConfusionMatrix(n_classes=2, device=device)
 
             with torch.no_grad():
                 for batch in val_loader:
                     step += 1
+                    if step % 20:
+                        print(f"Val step: {step} / {total_val_step}")
                     # Inference, everything can be reused
                     # Validate adv
                     input_ids = batch['input_ids'].to(device)
@@ -210,7 +219,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
                     embedding_val_cls_loss += cls_loss.item()
 
-                    val_progress_bar.update(1)
+                    # val_progress_bar.update(1)
                     
                 # Decode the last batch
                 # output_ids = torch.argmax(adv_output, dim=1).detach().cpu()
@@ -233,8 +242,12 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             recorder['f1_score'] = f1_score
             recorder['precision'] = precision
 
-    train_progress_bar.close()
-    val_progress_bar.close()
+        # Save model
+        if epoch >= 2:
+            torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}_ep{epoch}.pth")
+
+    # train_progress_bar.close()
+    # val_progress_bar.close()
 
     return recorder
 
@@ -253,6 +266,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--val_interval", type=int, default=1)
     parser.add_argument("--output_dir", type=str, default="output/")
+    parser.add_argument("--model_dir", type=str, default="model/")
 
     args = parser.parse_args()
 
@@ -285,7 +299,10 @@ if __name__ == '__main__':
         'loss_function': nn.CrossEntropyLoss(),
         'optimizer': adv_optimizer
     }
-    recorder = ResultRecorder(train_mode="adv_ft", params=[args.downsample, args.adv_mode, args.num_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval])
+
+    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]
+
+    recorder = ResultRecorder(train_mode="adv_ft", params=param_lst)
 
     recorder = train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, device, args)
 
