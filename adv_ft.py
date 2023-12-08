@@ -50,7 +50,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             # we first train adv model and then embedding model
             for batch in train_loader:
                 step += 1
-                if step % 20:
+                if step % 20 == 0:
                     print(f"Train step: {step} / {total_train_step}")
                 # Train adv, get embedding (no grad), hidden state and label (input token ids)
                 # Zero grad to eliminate embedding model training gradient 
@@ -196,7 +196,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             with torch.no_grad():
                 for batch in val_loader:
                     step += 1
-                    if step % 20:
+                    if step % 10 == 0:
                         print(f"Val step: {step} / {total_val_step}")
                     # Inference, everything can be reused
                     # Validate adv
