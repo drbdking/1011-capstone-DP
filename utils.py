@@ -27,8 +27,8 @@ nltk.download('punkt')
 # bert_aux_model.to(device)
 
 def tokenize_func(input):
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-    return tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True)
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+    return tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True)  # max_len
 
 # def remove_stopwords_punc(sentence):
 #     t = filter(lambda x: x.lower() not in stop_words, sentence.split(' '))

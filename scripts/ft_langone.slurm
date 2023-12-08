@@ -8,7 +8,7 @@
 #SBATCH --open-mode=append
 #SBATCH --output /gpfs/scratch/changd14/1011-capstone-DP/output/slurm_output/adv_ft-%J.log 
 
-module load singularity/3.1
+module load singularity/3.7.1
 singularity exec --bind /gpfs/scratch --nv --overlay /gpfs/scratch/changd14/overlay-25GB-500K.ext3:ro /gpfs/scratch/changd14/cuda11.7.99-cudnn8.5-devel-ubuntu22.04.2.sif /bin/bash -c "
 source /etc/profile.d/modules.sh
 source /ext3/miniconda3/etc/profile.d/conda.sh
