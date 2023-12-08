@@ -5,4 +5,5 @@ do
         do
         sbatch adv_fine_tune_langone.slurm $alpha $lr;
         echo "Submitted job for alpha = $alpha, lr = $lr"
+        done
 done
