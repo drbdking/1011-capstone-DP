@@ -9,6 +9,7 @@ import torch
 from torch import nn
 from tqdm.auto import tqdm
 
+
 from utils import *
 from data import *
 from models import *
@@ -19,7 +20,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
     # separate learning rate and num of training epochs for each model (classification, embedding, adversary)
     # The input (tgt) of adversary is the embedding / hidden_states[0] from Bert, the label is a tensor of input token ids
     # epoch iteration
-    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]
+    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.warmup_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]    
     param_lst = [str(x) for x in param_lst]
 
     adv_dict['model'].to(device)
@@ -77,26 +78,28 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     adv_dict['optimizer'].zero_grad()
                     adv_train_loss += adv_loss.item()
 
-
-                # Train embedding
-                # Mean pool the hidden states from Bert model and feed into classifier
-                sentence_embedding = torch.mean(hidden_states, dim=1)
-                cls_output = embedding_dict['classifier'](sentence_embedding)
-                label = batch['label'].to(device)
-                # Embedding loss = cls loss - alpha * adv loss
-                # Need to regenerate adv output and adv loss since we updated adv parameters
-                # Embeddings and hidden states can be reused since we didn't update embedding model when training adversary 
-                adv_output = adv_dict['model'](embeddings, hidden_states)
-                adv_output = torch.transpose(adv_output, 1, 2)
-                adv_loss = adv_dict['loss_function'](adv_output, input_ids)
-                cls_loss = embedding_dict['loss_function'](cls_output, label)
-                emebdding_loss = cls_loss - args.alpha * adv_loss
-                # emebdding_loss = cls_loss - 1.5 * adv_loss
-                emebdding_loss.backward()
-                embedding_dict['optimizer'].step()
-                embedding_dict['optimizer'].zero_grad()
-                embedding_train_adv_loss += adv_loss.item()
-                embedding_train_cls_loss += cls_loss.item()
+                # After warmup epoch, start updating embedding model
+                if epoch >= args.warmup_epochs:
+                    # Train embedding
+                    # Mean pool the hidden states from Bert model and feed into classifier
+                    sentence_embedding = torch.mean(hidden_states, dim=1)
+                    cls_output = embedding_dict['classifier'](sentence_embedding)
+                    label = batch['label'].to(device)
+                    # Embedding loss = cls loss - alpha * adv loss
+                    # Need to regenerate adv output and adv loss since we updated adv parameters
+                    # Embeddings and hidden states can be reused since we didn't update embedding model when training adversary 
+                    adv_output = adv_dict['model'](embeddings, hidden_states)
+                    adv_output = torch.transpose(adv_output, 1, 2)
+                    adv_loss = adv_dict['loss_function'](adv_output, input_ids)
+                    cls_loss = embedding_dict['loss_function'](cls_output, label)
+                    emebdding_loss = cls_loss - args.alpha * adv_loss
+                    # emebdding_loss = cls_loss - 1.5 * adv_loss
+                    emebdding_loss.backward()
+                    embedding_dict['optimizer'].step()
+                    embedding_dict['optimizer'].zero_grad()
+                    embedding_train_adv_loss += adv_loss.item()
+                    embedding_train_cls_loss += cls_loss.item()
+                    embedding_dict['scheduler'].step()
                 # train_progress_bar.update(1)
 
         elif args.adv_mode == 1:
@@ -242,9 +245,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             recorder['f1_score'] = f1_score
             recorder['precision'] = precision
 
-        # Save model
-        if epoch >= 2:
-            torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}_ep{epoch}.pth")
+    # Save final model
+    torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}.pth")
 
     # train_progress_bar.close()
     # val_progress_bar.close()
@@ -259,6 +261,7 @@ if __name__ == '__main__':
     parser.add_argument("--downsample", type=float, default=0.25)
     parser.add_argument("--adv_mode", type=int, default=0)
     parser.add_argument("--num_epochs", type=int, default=5)
+    parser.add_argument("--warmup_epochs", type=int, default=3)
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--adv_learning_rate", type=float, default=1e-5)
     parser.add_argument("--alpha", type=float, default=1.0)
@@ -283,12 +286,14 @@ if __name__ == '__main__':
         {"params": bert_model.parameters(), "lr": args.learning_rate},
         {"params": cls_model.parameters(), "lr": args.learning_rate},
         ])
+    embedding_scheduler = torch.optim.lr_scheduler.LinearLR(embedding_optimizer, start_factor=1.0, end_factor=0.5, total_iters=2000)
 
     embedding_dict = {
         'base_model': bert_model,
         'classifier': cls_model,
         'loss_function': nn.CrossEntropyLoss(),
-        'optimizer': embedding_optimizer
+        'optimizer': embedding_optimizer,
+        'scheduler': embedding_scheduler
     }
 
     # Adv model
@@ -300,7 +305,7 @@ if __name__ == '__main__':
         'optimizer': adv_optimizer
     }
 
-    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]
+    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.warmup_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]
 
     recorder = ResultRecorder(train_mode="adv_ft", params=param_lst)
 
