@@ -70,7 +70,6 @@ class AdversarialDecoder(nn.Module):
     def forward(self, tgt, memory):
         if self.use_separate_embedding:
             # tgt is the Tensor that stores the index of words
-            print(1)
             tgt = self.embedding(tgt)
         # The input tgt should be Bert embedding from the lowest layer or the output from embedding layer of this model
         mask_1 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(tgt, batch_first=True)).to(self.device)

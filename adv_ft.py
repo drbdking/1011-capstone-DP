@@ -16,12 +16,12 @@ from models import *
 
 
 def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, device, args):
-    include_bar = True
+    include_bar = False
     # A few thoughts about tunable hyperparameters:
     # separate learning rate and num of training epochs for each model (classification, embedding, adversary)
     # The input (tgt) of adversary is the embedding / hidden_states[0] from Bert, the label is a tensor of input token ids
     # epoch iteration
-    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.warmup_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]    
+    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.warmup_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.use_separate_embedding]
     param_lst = [str(x) for x in param_lst]
 
     adv_dict['model'].to(device)
@@ -262,8 +262,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             recorder['f1_score'] = f1_score
             recorder['precision'] = precision
 
-    # Save final model
-    torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}.pth")
+        if (epoch + 1) % 3 == 0:
+            # Save model
+            torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}_ep{epoch + 1}.pth")
 
     if include_bar:
         train_progress_bar.close()
@@ -326,7 +327,7 @@ if __name__ == '__main__':
         'optimizer': adv_optimizer
     }
 
-    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.warmup_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.adv_interval]
+    param_lst = [args.downsample, args.adv_mode, args.num_epochs, args.warmup_epochs, args.learning_rate, args.adv_learning_rate, args.alpha, args.use_separate_embedding]
 
     recorder = ResultRecorder(train_mode="adv_ft", params=param_lst)
 
