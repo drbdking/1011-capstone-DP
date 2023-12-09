@@ -117,7 +117,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/quora_duplicate_questions.tsv", args.sample_size, args.batch_size, args.batch_size)
+    train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/qqp_threat_train.tsv", args.sample_size, args.batch_size, args.batch_size)
     
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

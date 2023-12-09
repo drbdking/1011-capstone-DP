@@ -25,7 +25,7 @@ aux_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 bert_aux_model.to(device)
 
 def tokenize_func(input):
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
+    tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     return tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True)
 
 def remove_stopwords_punc(sentence):
@@ -36,11 +36,8 @@ def preprocess_func_aux(input):
     # Batch processing is not implemented here due to potential variable length problem
     # Note: for convenience it is uncased
 
-    input['question1'] = remove_stopwords_punc(input['question1'])
-    input['question2'] = remove_stopwords_punc(input['question2'])
-
     # Get sentence embedding
-    encoding = aux_tokenizer(input['question1'], input['question2'], truncation=True, add_special_tokens=False)  # Remove cls and sep
+    encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True, add_special_tokens=False)  # Remove cls and sep; Add padding
     input_ids = torch.Tensor(encoding['input_ids']).to(torch.int64).reshape(1, -1).to(device)
     token_type_ids = torch.Tensor(encoding['token_type_ids']).to(torch.int64).reshape(1, -1).to(device)
     attention_mask = torch.Tensor(encoding['attention_mask']).to(torch.int64).reshape(1, -1).to(device)
@@ -49,7 +46,10 @@ def preprocess_func_aux(input):
     input['sentence_embedding'] = sentence_embedding.reshape(-1).cpu()
 
     # Get label for multi set
-    input_ids_one_hot = F.one_hot(torch.Tensor(encoding['input_ids']).to(torch.int64), num_classes=bert_aux_config.vocab_size)  # size = seq_len * vocab_size
+    input['question1'] = remove_stopwords_punc(input['question1'])
+    input['question2'] = remove_stopwords_punc(input['question2'])
+    label_encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True, add_special_tokens=False)  # Remove cls and sep; Add padding
+    input_ids_one_hot = F.one_hot(torch.Tensor(label_encoding['input_ids']).to(torch.int64), num_classes=bert_aux_config.vocab_size)  # size = seq_len * vocab_size
     aux_label = torch.sum(input_ids_one_hot, dim=0).int()  # Careful with dim, first is seq_len
     input['aux_label'] = aux_label.to(torch.bool)
     return input
