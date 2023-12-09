@@ -102,11 +102,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
                     emebdding_loss = cls_loss - args.alpha * adv_loss
                     # emebdding_loss = cls_loss - 1.5 * adv_loss
-
-
-                    # DEBUG
-                    # emebdding_loss.backward()
-                    # embedding_dict['optimizer'].step()
+                    emebdding_loss.backward()
+                    embedding_dict['optimizer'].step()
                     embedding_dict['optimizer'].zero_grad()
                     embedding_train_adv_loss += adv_loss.item()
                     embedding_train_cls_loss += cls_loss.item()
