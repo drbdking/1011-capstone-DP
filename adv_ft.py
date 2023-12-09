@@ -16,6 +16,7 @@ from models import *
 
 
 def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, device, args):
+    include_bar = True
     # A few thoughts about tunable hyperparameters:
     # separate learning rate and num of training epochs for each model (classification, embedding, adversary)
     # The input (tgt) of adversary is the embedding / hidden_states[0] from Bert, the label is a tensor of input token ids
@@ -28,8 +29,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
     embedding_dict['classifier'].to(device)
     total_train_step = len(train_loader)
     total_val_step = len(val_loader)
-    # train_progress_bar = tqdm(range(len(train_loader)))
-    # val_progress_bar = tqdm(range(len(val_loader)))
+    if include_bar:
+        train_progress_bar = tqdm(range(len(train_loader)))
+        val_progress_bar = tqdm(range(len(val_loader)))
 
     for epoch in range(args.num_epochs):
         print("-" * 10)
@@ -43,15 +45,16 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
         embedding_dict['base_model'].train()
         embedding_dict['classifier'].train()
         
-        # train_progress_bar.refresh()
-        # train_progress_bar.reset()
+        if include_bar:
+            train_progress_bar.refresh()
+            train_progress_bar.reset()
 
         if args.adv_mode == 0:
             # This is the common practice of adversarial training, for each mini-batch
             # we first train adv model and then embedding model
             for batch in train_loader:
                 step += 1
-                if step % 50 == 0:
+                if step % 50 == 0 and not include_bar:
                     print(f"Train step: {step} / {total_train_step}")
                 # Train adv, get embedding (no grad), hidden state and label (input token ids)
                 # Zero grad to eliminate embedding model training gradient 
@@ -62,9 +65,14 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 attention_mask = batch['attention_mask'].to(device)
                 # Input of adv model, no grad by using detach()
                 # It is also possible to keep the grad and do zero grad when training embedding model
-                embeddings = embedding_dict['base_model'].embeddings(input_ids, token_type_ids)
-                embeddings_no_grad = embeddings.detach()
-                hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
+                if not args.use_separate_embedding:
+                    embeddings = embedding_dict['base_model'].embeddings(input_ids, token_type_ids)
+                    embeddings_no_grad = embeddings.detach()
+                else:
+                    embeddings = input_ids
+                    embeddings_no_grad = input_ids
+
+                hidden_states = embedding_dict['base_model'](input_ids, attention_mask)['last_hidden_state']  # remove token_type_ids
                 hidden_states_no_grad = hidden_states.detach()
 
                 # A tunable parameter, reduce num of training of adv model
@@ -100,7 +108,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     embedding_train_adv_loss += adv_loss.item()
                     embedding_train_cls_loss += cls_loss.item()
                     embedding_dict['scheduler'].step()
-                # train_progress_bar.update(1)
+
+                if include_bar:
+                    train_progress_bar.update(1)
 
         elif args.adv_mode == 1:
             # In this training mode, we train adv and embedding separately
@@ -137,6 +147,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 # train_progress_bar.update(1)
 
             step = 0
+            
             # train_progress_bar.refresh()
             # train_progress_bar.reset()
 
@@ -191,15 +202,16 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             embedding_dict['base_model'].eval()
             embedding_dict['classifier'].eval()
 
-            # val_progress_bar.refresh()
-            # val_progress_bar.reset()
+            if include_bar:
+                val_progress_bar.refresh()
+                val_progress_bar.reset()
 
             conf_mat = ConfusionMatrix(n_classes=2, device=device)
 
             with torch.no_grad():
                 for batch in val_loader:
                     step += 1
-                    if step % 20 == 0:
+                    if step % 20 == 0 and not include_bar:
                         print(f"Val step: {step} / {total_val_step}")
                     # Inference, everything can be reused
                     # Validate adv
@@ -207,8 +219,12 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     token_type_ids = batch['token_type_ids'].to(device)
                     attention_mask = batch['attention_mask'].to(device)
 
-                    embeddings = embedding_dict['base_model'].embeddings(input_ids, token_type_ids)
-                    hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
+                    if not args.use_separate_embedding:
+                        embeddings = embedding_dict['base_model'].embeddings(input_ids, token_type_ids)
+                    else:
+                        embeddings = input_ids
+
+                    hidden_states = embedding_dict['base_model'](input_ids, attention_mask)['last_hidden_state']  # remove token_type_ids
                     adv_output = adv_dict['model'](embeddings, hidden_states)
                     adv_output = torch.transpose(adv_output, 1, 2)
                     adv_loss = adv_dict['loss_function'](adv_output, input_ids)
@@ -222,7 +238,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
                     embedding_val_cls_loss += cls_loss.item()
 
-                    # val_progress_bar.update(1)
+                    if include_bar:
+                        val_progress_bar.update(1)
                     
                 # Decode the last batch
                 # output_ids = torch.argmax(adv_output, dim=1).detach().cpu()
@@ -248,8 +265,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
     # Save final model
     torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}.pth")
 
-    # train_progress_bar.close()
-    # val_progress_bar.close()
+    if include_bar:
+        train_progress_bar.close()
+        val_progress_bar.close()
 
     return recorder
 
@@ -265,6 +283,7 @@ if __name__ == '__main__':
     parser.add_argument("--learning_rate", type=float, default=1e-5)
     parser.add_argument("--adv_learning_rate", type=float, default=1e-5)
     parser.add_argument("--alpha", type=float, default=1.0)
+    parser.add_argument("--use_separate_embedding", type=bool, default=True)
     parser.add_argument("--adv_interval", type=int, default=1)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--val_interval", type=int, default=1)
@@ -297,7 +316,7 @@ if __name__ == '__main__':
     }
 
     # Adv model
-    adv_model = AdversarialDecoder(tgt_vocab_size=bert_config.vocab_size, device=device)
+    adv_model = AdversarialDecoder(tgt_vocab_size=bert_config.vocab_size, use_separate_embedding=args.use_separate_embedding, device=device)
     adv_optimizer = torch.optim.Adam(adv_model.parameters(), args.adv_learning_rate)
     adv_dict = {
         'model': adv_model,

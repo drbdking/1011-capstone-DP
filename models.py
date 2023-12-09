@@ -54,10 +54,12 @@ class AdversarialDecoder(nn.Module):
     def __init__(self, d_model=768, nhead=12, num_decoder_layers=2, dim_feedforward=256,
                  tgt_vocab_size=10000,
                  dropout=0.1, activation=F.relu, layer_norm_eps=1e-5,
-                 batch_first=True, norm_first=False, device=None, dtype=None):
+                 batch_first=True, norm_first=False, use_separate_embedding=False, device=None, dtype=None):
         super(AdversarialDecoder, self).__init__()
         # All you need from Bert is the vocab_size
         self.device = device
+        self.use_separate_embedding = use_separate_embedding
+        self.embedding = nn.Embedding(tgt_vocab_size, d_model)
         decoder_layer = nn.TransformerDecoderLayer(d_model, nhead, dim_feedforward, dropout, 
                                                    activation, layer_norm_eps, batch_first, 
                                                    norm_first)
@@ -66,7 +68,10 @@ class AdversarialDecoder(nn.Module):
         self.generator = nn.Linear(d_model, tgt_vocab_size)
 
     def forward(self, tgt, memory):
-        # The input tgt should be Bert embedding from the lowest layer
+        if self.use_separate_embedding:
+            # tgt is the Tensor that stores the index of words
+            tgt = self.embedding(tgt)
+        # The input tgt should be Bert embedding from the lowest layer or the output from embedding layer of this model
         mask_1 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(tgt, batch_first=True)).to(self.device)
         # mask_2 = nn.Transformer.generate_square_subsequent_mask(get_seq_len(memory, batch_first=True)).to(self.device)
         output = self.decoder(tgt, memory, tgt_mask=mask_1)
