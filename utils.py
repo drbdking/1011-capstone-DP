@@ -2,7 +2,6 @@
 """
 import string
 
-
 import torch
 from torch.nn import functional as F
 import pandas as pd
@@ -39,9 +38,8 @@ def preprocess_func_aux(input):
     # Get sentence embedding
     encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True)  # Add padding
     input_ids = torch.Tensor(encoding['input_ids']).to(torch.int64).reshape(1, -1).to(device)
-    token_type_ids = torch.Tensor(encoding['token_type_ids']).to(torch.int64).reshape(1, -1).to(device)
     attention_mask = torch.Tensor(encoding['attention_mask']).to(torch.int64).reshape(1, -1).to(device)
-    bert_output = bert_aux_model(input_ids, attention_mask, token_type_ids)['last_hidden_state']
+    bert_output = bert_aux_model(input_ids, attention_mask)['last_hidden_state']
     sentence_embedding = torch.mean(bert_output, dim=1)  # Careful with dim, the first dim is batch, second is seq_len
     input['sentence_embedding'] = sentence_embedding.reshape(-1).cpu()
 
@@ -55,25 +53,3 @@ def preprocess_func_aux(input):
     return input
 
 
-class ConfusionMatrix:
-    def __init__(self, n_classes, device):
-        self._matrix = torch.zeros(n_classes * n_classes).to(device)
-        self._n = n_classes
-
-    def __add__(self, other):
-        if isinstance(other, ConfusionMatrix):
-            self._matrix.add_(other._matrix)
-        elif isinstance(other, tuple):
-            self.update(*other)
-        else:
-            raise NotImplemented
-        return self
-
-    def update(self, prediction: torch.tensor, label: torch.tensor):
-        conf_data = (prediction * self._n + label).int()
-        conf = conf_data.bincount(minlength=self._n * self._n)
-        self._matrix.add_(conf)
-
-    @property
-    def value(self):
-        return self._matrix.cpu().tolist()
