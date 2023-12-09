@@ -62,6 +62,12 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 train_df = pd.read_parquet('./qqp/train/0000.parquet')
 validation_df = pd.read_parquet('./qqp/validation/0000.parquet')
 
+train_sample = int(len(train_df) / (len(train_df) + len(validation_df)) * 60000)
+validation_sample = int(len(validation_df) / (len(train_df) + len(validation_df)) * 60000)
+
+train_df = train_df.sample(n=train_sample).reset_index(drop=True)
+validation_df = validation_df.sample(n=validation_sample).reset_index(drop=True)
+
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 train_set = QQPDataSet(train_df, tokenizer)
 validation_set = QQPDataSet(validation_df, tokenizer)
