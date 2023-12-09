@@ -104,6 +104,36 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
     return 
 
 
+def test_threat_model(test_loader, model, device):
+
+    model.eval()
+    test_progress_bar = tqdm(range(len(test_loader)))
+    tp_total, fp_total, fn_total, test_loss, step = 0, 0, 0, 0, 0
+
+    with torch.no_grad():
+        for batch in test_loader:
+            step += 1
+            sentence_embedding = batch['sentence_embedding'].to(device)
+            aux_label = batch['aux_label'].to(device)
+            output, loss = model(sentence_embedding, aux_label)
+            test_loss += loss
+            test_progress_bar.update(1)
+    test_loss /= step
+
+    one_hot_labels = aux_label.cpu()
+    one_hot_predictions = output.cpu()
+    for one_hot_label, one_hot_prediction in zip(one_hot_labels, one_hot_predictions):
+        tp, fp, fn = get_tp_fp_fn_metrics(one_hot_prediction, one_hot_label)
+        tp_total += tp
+        fp_total += fp
+        fn_total += fn
+    precision = tp_total / (tp_total + fp_total)
+    recall = tp_total / (tp_total + fn_total)
+    f1 = 2 * precision * recall / (precision + recall)
+
+    print(f"test loss: {test_loss:.4f}, test precision: {precision:.4f}, test recall: {recall:.4f}, test f1: {f1:.4f}")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
@@ -138,6 +168,7 @@ if __name__ == '__main__':
     print("-------Start Testing-------")
 
     # Test threat model
+    test_threat_model(test_loader, model, device)
 
 
 
