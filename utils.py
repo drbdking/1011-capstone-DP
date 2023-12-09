@@ -37,7 +37,7 @@ def preprocess_func_aux(input):
     # Note: for convenience it is uncased
 
     # Get sentence embedding
-    encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True, add_special_tokens=False)  # Remove cls and sep; Add padding
+    encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True)  # Add padding
     input_ids = torch.Tensor(encoding['input_ids']).to(torch.int64).reshape(1, -1).to(device)
     token_type_ids = torch.Tensor(encoding['token_type_ids']).to(torch.int64).reshape(1, -1).to(device)
     attention_mask = torch.Tensor(encoding['attention_mask']).to(torch.int64).reshape(1, -1).to(device)
