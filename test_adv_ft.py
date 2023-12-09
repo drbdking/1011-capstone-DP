@@ -16,8 +16,6 @@ from models import *
 
 
 def test(test_loader, bert_model, cls_model):
-    step = 0
-
     bert_model.eval()
     cls_model.eval()
     test_progress_bar = tqdm(range(len(test_loader)))
@@ -26,19 +24,13 @@ def test(test_loader, bert_model, cls_model):
 
     with torch.no_grad():
         for batch in test_loader:
-            step += 1
-            # Inference, everything can be reused
-
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
-
-            hidden_states = bert_model(input_ids, attention_mask)['last_hidden_state']  # remove token_type_ids
-
+            hidden_states = bert_model(input_ids, attention_mask)['last_hidden_state']
             sentence_embedding = torch.mean(hidden_states, dim=1)
             cls_output = cls_model(sentence_embedding)
             label = batch['label'].to(device)
             conf_mat += torch.argmax(cls_output, dim=1), label
-
             test_progress_bar.update(1)
             
     tn, fn, fp, tp = conf_mat.value
