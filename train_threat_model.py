@@ -114,11 +114,13 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
     parser.add_argument("--mask_magnitude", type=float, default=0)
+    parser.add_argument("--test_sample_size", type=float, default=2000)
 
     args = parser.parse_args()
 
     train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/qqp_threat_train.tsv", args.sample_size, args.batch_size, args.batch_size)
-    
+    test_dataset, test_loader = load_aux_test_data("data/qqp_threat_test.tsv", args.test_sample_size, args.batch_size)
+
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -133,6 +135,9 @@ if __name__ == '__main__':
     # Train threat model
     train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
+    print("-------Start Testing-------")
+
     # Test threat model
+
 
 
