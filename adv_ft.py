@@ -61,7 +61,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 adv_dict['optimizer'].zero_grad()
                 
                 input_ids = batch['input_ids'].to(device)
-                token_type_ids = batch['token_type_ids'].to(device)
+                # token_type_ids = batch['token_type_ids'].to(device)
                 attention_mask = batch['attention_mask'].to(device)
                 # Input of adv model, no grad by using detach()
                 # It is also possible to keep the grad and do zero grad when training embedding model
@@ -93,7 +93,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     sentence_embedding = torch.mean(hidden_states, dim=1)
                     cls_output = embedding_dict['classifier'](sentence_embedding)
                     label = batch['label'].to(device)
-                    # Embedding loss = cls loss - alpha * adv loss
+   
                     # Need to regenerate adv output and adv loss since we updated adv parameters
                     # Embeddings and hidden states can be reused since we didn't update embedding model when training adversary 
                     adv_output = adv_dict['model'](embeddings, hidden_states)
@@ -101,7 +101,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     adv_loss = adv_dict['loss_function'](adv_output, input_ids)
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
                     # emebdding_loss = cls_loss - args.alpha * adv_loss
-                    emebdding_loss = -adv_loss
+                    emebdding_loss = -args.alpha * adv_loss
                     emebdding_loss.backward()
                     embedding_dict['optimizer'].step()
                     embedding_dict['optimizer'].zero_grad()
@@ -234,11 +234,11 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     # Inference, everything can be reused
                     # Validate adv
                     input_ids = batch['input_ids'].to(device)
-                    token_type_ids = batch['token_type_ids'].to(device)
+                    # token_type_ids = batch['token_type_ids'].to(device)
                     attention_mask = batch['attention_mask'].to(device)
 
                     if not args.use_separate_embedding:
-                        embeddings = embedding_dict['base_model'].embeddings(input_ids, token_type_ids)
+                        embeddings = embedding_dict['base_model'].embeddings(input_ids)
                     else:
                         embeddings = input_ids
 
