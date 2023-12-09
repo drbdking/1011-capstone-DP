@@ -100,8 +100,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     adv_output = torch.transpose(adv_output, 1, 2)
                     adv_loss = adv_dict['loss_function'](adv_output, input_ids)
                     cls_loss = embedding_dict['loss_function'](cls_output, label)
-                    emebdding_loss = cls_loss - args.alpha * adv_loss
-                    # emebdding_loss = cls_loss - 1.5 * adv_loss
+                    # emebdding_loss = cls_loss - args.alpha * adv_loss
+                    emebdding_loss = -adv_loss
                     emebdding_loss.backward()
                     embedding_dict['optimizer'].step()
                     embedding_dict['optimizer'].zero_grad()
