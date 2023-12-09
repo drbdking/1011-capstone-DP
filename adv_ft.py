@@ -28,8 +28,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
     embedding_dict['classifier'].to(device)
     total_train_step = len(train_loader)
     total_val_step = len(val_loader)
-    # train_progress_bar = tqdm(range(len(train_loader)))
-    # val_progress_bar = tqdm(range(len(val_loader)))
+    train_progress_bar = tqdm(range(len(train_loader)))
+    val_progress_bar = tqdm(range(len(val_loader)))
 
     for epoch in range(args.num_epochs):
         print("-" * 10)
@@ -43,8 +43,8 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
         embedding_dict['base_model'].train()
         embedding_dict['classifier'].train()
         
-        # train_progress_bar.refresh()
-        # train_progress_bar.reset()
+        train_progress_bar.refresh()
+        train_progress_bar.reset()
 
         if args.adv_mode == 0:
             # This is the common practice of adversarial training, for each mini-batch
@@ -100,7 +100,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                     embedding_train_adv_loss += adv_loss.item()
                     embedding_train_cls_loss += cls_loss.item()
                     embedding_dict['scheduler'].step()
-                # train_progress_bar.update(1)
+                train_progress_bar.update(1)
 
         elif args.adv_mode == 1:
             # In this training mode, we train adv and embedding separately
