@@ -175,7 +175,7 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
                 else:
                     embeddings = input_ids
 
-                hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
+                hidden_states = embedding_dict['base_model'](input_ids, attention_mask)['last_hidden_state']
                 
                 # Mean pool the hidden states from Bert model and feed into classifier
                 sentence_embedding = torch.mean(hidden_states, dim=1)
