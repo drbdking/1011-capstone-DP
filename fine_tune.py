@@ -47,7 +47,8 @@ def train_embedding(train_loader, val_loader, embedding_dict, recorder, device, 
 
             # Train embedding
             # Mean pool the hidden states from Bert model and feed into classifier
-            hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
+            hidden_states = embedding_dict['base_model'](input_ids, attention_mask)['last_hidden_state']
+            # hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
             sentence_embedding = torch.mean(hidden_states, dim=1)
             # sentence_embedding = hidden_states
             cls_output = embedding_dict['classifier'](sentence_embedding)
@@ -84,7 +85,8 @@ def train_embedding(train_loader, val_loader, embedding_dict, recorder, device, 
                     input_ids = batch['input_ids'].to(device)
                     token_type_ids = batch['token_type_ids'].to(device)
                     attention_mask = batch['attention_mask'].to(device)
-                    hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
+                    hidden_states = embedding_dict['base_model'](input_ids, attention_mask)['last_hidden_state']
+                    # hidden_states = embedding_dict['base_model'](input_ids, attention_mask, token_type_ids)['last_hidden_state']
                     sentence_embedding = torch.mean(hidden_states, dim=1)
                     # sentence_embedding = hidden_states
                     cls_output = embedding_dict['classifier'](sentence_embedding)
