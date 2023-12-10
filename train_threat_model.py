@@ -140,13 +140,17 @@ if __name__ == '__main__':
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-3)
     parser.add_argument("--num_epochs", type=int, default=50)
-    parser.add_argument("--sample_size", type=int, default=5000)
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--val_interval", type=int, default=1)
+    parser.add_argument("--sample_size", type=int, default=20000)
+    parser.add_argument("--batch_size", type=int, default=50)
+    parser.add_argument("--val_interval", type=int, default=10)
     parser.add_argument("--mask_magnitude", type=float, default=0)
-    parser.add_argument("--test_sample_size", type=float, default=2000)
+    parser.add_argument("--test_sample_size", type=int, default=10000)
+    parser.add_argument("--model_path", type=string)
+    parser.add_argument("--model_type", type=string, default='ADV')
 
     args = parser.parse_args()
+
+    load_model(args.model_path, args.model_type)
 
     train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/qqp_threat_train.tsv", args.sample_size, args.batch_size, args.batch_size)
     test_dataset, test_loader = load_aux_test_data("data/qqp_threat_test.tsv", args.test_sample_size, args.batch_size)
@@ -162,10 +166,12 @@ if __name__ == '__main__':
     # Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
 
+    print("----------Start Training----------")
+
     # Train threat model
     train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
-    print("-------Start Testing-------")
+    print("----------Start Testing----------")
 
     # Test threat model
     test_threat_model(test_loader, model, device)

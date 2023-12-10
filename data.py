@@ -38,7 +38,7 @@ def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
     qqp_dataset = qqp_dataset.select(range(sample_size))
     # Add filter
     qqp_dataset = qqp_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
-    qqp_dataset = qqp_dataset.map(preprocess_func_aux, load_from_cache_file=False)
+    qqp_dataset = qqp_dataset.map(preprocess_func_aux, writer_batch_size=10)
     qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
 
     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
@@ -59,7 +59,7 @@ def load_aux_test_data(tsv_path, test_sample_size, test_batch_size):
     test_dataset = test_dataset.select(range(test_sample_size))
     # Add filter
     test_dataset = test_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
-    test_dataset = test_dataset.map(preprocess_func_aux, load_from_cache_file=False)
+    test_dataset = test_dataset.map(preprocess_func_aux, writer_batch_size=10)
     test_dataset = test_dataset.remove_columns(['question1', 'question2'])
     test_dataset.set_format("torch")
 
