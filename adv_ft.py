@@ -280,9 +280,9 @@ def train_adv(train_loader, val_loader, adv_dict, embedding_dict, recorder, devi
             recorder['f1_score'] = round(f1_score, 4)
             recorder['precision'] = round(precision, 4)
 
-        # if (epoch + 1) % 3 == 0:
+        if (epoch + 1) % 3 == 0:
             # Save model
-            # torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}_ep{epoch + 1}.pth")
+            torch.save({'base_state_dict': embedding_dict['base_model'].state_dict(),'cls_state_dict': embedding_dict['classifier'].state_dict()}, f"{args.model_dir}adv_ft_{'_'.join(param_lst)}_ep{epoch + 1}.pth")
 
     if include_bar:
         train_progress_bar.close()
