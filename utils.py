@@ -33,7 +33,7 @@ def remove_stopwords_punc(sentence):
 
 def preprocess_func_aux(input):
     # Batch processing is not implemented here due to potential variable length problem
-    # Note: for convenience it is uncased
+    # Note: for convenience it's uncased
 
     # Get sentence embedding
     encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True)  # Add padding
