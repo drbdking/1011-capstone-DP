@@ -144,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--val_interval", type=int, default=1)
     parser.add_argument("--mask_magnitude", type=float, default=0)
-    parser.add_argument("--test_sample_size", type=float, default=2000)
+    parser.add_argument("--test_sample_size", type=int, default=2000)
 
     args = parser.parse_args()
 
