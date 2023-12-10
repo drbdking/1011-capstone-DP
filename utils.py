@@ -44,9 +44,7 @@ def load_model(model_path, model_type):
         bert_aux_model.to(device)
 
         model_state_dict = torch.load(model_path, map_location='cpu')
-        for key in model_state_dict.keys():
-            print(key)
-        bert_aux_model.load_state_dict(model_state_dict)
+        bert_aux_model.load_state_dict(model_state_dict, strict=False)
 
 
 
