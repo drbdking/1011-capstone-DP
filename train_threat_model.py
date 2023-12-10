@@ -152,6 +152,8 @@ if __name__ == '__main__':
 
     load_model(args.model_path, args.model_type)
 
+    print("Load model success")
+
     train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/qqp_threat_train.tsv", args.sample_size, args.batch_size, args.batch_size)
     test_dataset, test_loader = load_aux_test_data("data/qqp_threat_test.tsv", args.test_sample_size, args.batch_size)
 
