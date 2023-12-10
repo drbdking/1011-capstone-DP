@@ -6,6 +6,7 @@ from sklearn.metrics import accuracy_score, f1_score
 import pandas as pd
 from tqdm import tqdm
 import logging
+from sklearn.metrics import recall_score
 
 logging.getLogger("transformers.tokenization_utils_base").setLevel(logging.ERROR)
 
@@ -61,6 +62,12 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 train_df = pd.read_parquet('./qqp/train/0000.parquet')
 validation_df = pd.read_parquet('./qqp/validation/0000.parquet')
+
+train_sample = int(len(train_df) / (len(train_df) + len(validation_df)) * 60000)
+validation_sample = int(len(validation_df) / (len(train_df) + len(validation_df)) * 60000)
+
+train_df = train_df.sample(n=train_sample).reset_index(drop=True)
+validation_df = validation_df.sample(n=validation_sample).reset_index(drop=True)
 
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 train_set = QQPDataSet(train_df, tokenizer)
@@ -125,3 +132,37 @@ for lr in learning_rates:
         val_f1 = f1_score(true_labels, predictions, average='weighted')
 
         print(f"Validation Loss: {avg_val_loss}, Accuracy: {val_accuracy}, F1 Score: {val_f1}")
+    model_save_path = f'bert_finetuned_lr{lr}_noise_up_to_pooling.pt'
+    torch.save(model.bert.state_dict(), model_save_path)
+        
+test_df = pd.read_parquet('./qqp/test/0000.parquet')
+
+test_sample = 40000
+test_df = test_df.sample(n=test_sample).reset_index(drop=True)
+test_set = QQPDataSet(test_df, tokenizer)
+test_loader = DataLoader(test_set, batch_size=64)
+
+model.eval()
+total_test_loss = 0
+test_true_labels = []
+test_predictions = []
+
+with torch.no_grad():
+    for data in test_loader:
+        ids = data['ids'].to(device, dtype=torch.long)
+        mask = data['mask'].to(device, dtype=torch.long)
+        labels = data['labels'].to(device, dtype=torch.long)
+
+        outputs = model(ids, mask)
+        loss = loss_function(outputs, labels)
+        total_test_loss += loss.item()
+
+        test_true_labels.extend(labels.detach().cpu().numpy())
+        test_predictions.extend(torch.argmax(outputs, dim=1).detach().cpu().numpy())
+
+avg_test_loss = total_test_loss / len(test_loader)
+test_accuracy = accuracy_score(test_true_labels, test_predictions)
+test_f1 = f1_score(test_true_labels, test_predictions, average='weighted')
+test_recall = recall_score(test_true_labels, test_predictions)
+
+print(f"Test Loss: {avg_test_loss}, Accuracy: {test_accuracy}, F1 Score: {test_f1}, Recall: {test_recall}")
