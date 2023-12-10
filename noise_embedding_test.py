@@ -30,7 +30,7 @@ class QQPDataSet(Dataset):
             add_special_tokens=True,
             max_length=self.max_len,
             padding='max_length',
-            truncation=True,  # 显式设置截断
+            truncation=True,
             return_attention_mask=True,
             return_token_type_ids=True,
         )
@@ -155,7 +155,7 @@ for lr in learning_rates:
         val_f1 = f1_score(true_labels, predictions, average='weighted')
 
         print(f"Validation Loss: {avg_val_loss}, Accuracy: {val_accuracy}, F1 Score: {val_f1}")
-    model_save_path = f'bert_finetuned_lr{lr}_noise_up_to_pooling.pt'
+    model_save_path = f'bert_finetuned_lr{lr}_noise.pt'
     torch.save(model.bert.state_dict(), model_save_path)
     print(f"Model saved to {model_save_path}")
 

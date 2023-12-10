@@ -26,24 +26,7 @@ def split_data(df, ratios, shuffle=True, random_state=42):
         df = df.sample(frac=1, random_state=random_state).reset_index(drop=True)
 
     return np.split(df, np.cumsum((np.array(ratios[:-1]) * len(df)).astype(int)))
-    
-    
-def load_data(tsv_path, train_batch_size, val_batch_size):
-    df = pd.read_csv(tsv_path, sep = '\t')
-    data = {'question1': df['question1'].astype(str).tolist(), 
-            'question2': df['question2'].astype(str).tolist(), 
-            'label': df['is_duplicate'].tolist()}
-    qqp_dataset = Dataset.from_dict(data)
-    qqp_dataset = qqp_dataset.shuffle()
-    qqp_dataset = qqp_dataset.select(range(10000))
-    qqp_dataset = qqp_dataset.map(tokenize_func, batched=True, load_from_cache_file=False)
-    qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
-    train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
-    train_dataset.set_format("torch")
-    val_dataset.set_format("torch")
-    train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
-    return train_dataset, train_loader, val_dataset, val_loader
+
 
 def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
     df = pd.read_csv(tsv_path, sep = '\t')
@@ -53,7 +36,9 @@ def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
     qqp_dataset = Dataset.from_dict(data)
     qqp_dataset = qqp_dataset.shuffle()
     qqp_dataset = qqp_dataset.select(range(sample_size))
-    qqp_dataset = qqp_dataset.map(preprocess_func_aux, load_from_cache_file=False)
+    # Add filter
+    qqp_dataset = qqp_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
+    qqp_dataset = qqp_dataset.map(preprocess_func_aux, writer_batch_size=10)
     qqp_dataset = qqp_dataset.remove_columns(['question1', 'question2'])
 
     train_dataset, val_dataset = qqp_dataset.train_test_split(test_size=0.2).values()
@@ -63,3 +48,20 @@ def load_aux_data(tsv_path, sample_size, train_batch_size, val_batch_size):
     train_loader = DataLoader(train_dataset, batch_size=train_batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=val_batch_size, shuffle=True)
     return train_dataset, train_loader, val_dataset, val_loader
+
+
+def load_aux_test_data(tsv_path, test_sample_size, test_batch_size):
+    df = pd.read_csv(tsv_path, sep = '\t')
+    data = {'question1': df['question1'].astype(str).tolist(),
+            'question2': df['question2'].astype(str).tolist(),
+            }
+    test_dataset = Dataset.from_dict(data)
+    test_dataset = test_dataset.select(range(test_sample_size))
+    # Add filter
+    test_dataset = test_dataset.filter(lambda x: len(remove_stopwords_punc(x['question1']) + remove_stopwords_punc(x['question2'])) != 0)
+    test_dataset = test_dataset.map(preprocess_func_aux, writer_batch_size=10)
+    test_dataset = test_dataset.remove_columns(['question1', 'question2'])
+    test_dataset.set_format("torch")
+
+    test_loader = DataLoader(test_dataset, batch_size=test_batch_size, shuffle=False)
+    return test_dataset, test_loader

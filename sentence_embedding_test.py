@@ -132,7 +132,7 @@ for lr in learning_rates:
         val_f1 = f1_score(true_labels, predictions, average='weighted')
 
         print(f"Validation Loss: {avg_val_loss}, Accuracy: {val_accuracy}, F1 Score: {val_f1}")
-    model_save_path = f'bert_finetuned_lr{lr}_noise_up_to_pooling.pt'
+    model_save_path = f'bert_finetuned_lr{lr}.pt'
     torch.save(model.bert.state_dict(), model_save_path)
         
 test_df = pd.read_parquet('./qqp/test/0000.parquet')
