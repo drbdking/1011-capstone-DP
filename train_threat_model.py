@@ -163,7 +163,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Model
-    model = MultiSetInversionModel(emb_dim=bert_aux_config.hidden_size, output_size=bert_aux_config.vocab_size, 
+    model = MultiSetInversionModel(emb_dim=768, output_size=30522,
                                    steps=32, device=device, mask_magnitude=args.mask_magnitude)
     model.to(device)
 
