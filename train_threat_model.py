@@ -145,14 +145,16 @@ if __name__ == '__main__':
     parser.add_argument("--val_interval", type=int, default=10)
     parser.add_argument("--mask_magnitude", type=float, default=0)
     parser.add_argument("--test_sample_size", type=int, default=10000)
-    parser.add_argument("--model_path", type=string)
-    parser.add_argument("--model_type", type=string, default='ADV')
+    parser.add_argument("--model_path", type=str)
+    parser.add_argument("--model_type", type=str, default='ADV')
 
     args = parser.parse_args()
 
+    print("----------Start Loading Model----------")
+
     load_model(args.model_path, args.model_type)
 
-    print("Load model success")
+    print("----------Start Loading Data----------")
 
     train_dataset, train_loader, val_dataset, val_loader = load_aux_data("data/qqp_threat_train.tsv", args.sample_size, args.batch_size, args.batch_size)
     test_dataset, test_loader = load_aux_test_data("data/qqp_threat_test.tsv", args.test_sample_size, args.batch_size)
