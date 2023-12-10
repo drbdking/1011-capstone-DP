@@ -46,7 +46,7 @@ def preprocess_func_aux(input):
     # Get label for multi set
     input['question1'] = remove_stopwords_punc(input['question1'])
     input['question2'] = remove_stopwords_punc(input['question2'])
-    label_encoding = aux_tokenizer(input['question1'], input['question2'], padding="max_length", truncation=True, add_special_tokens=False)  # Remove cls and sep; Add padding
+    label_encoding = aux_tokenizer(input['question1'], input['question2'], truncation=True, add_special_tokens=False)  # Remove cls and sep
     input_ids_one_hot = F.one_hot(torch.Tensor(label_encoding['input_ids']).to(torch.int64), num_classes=bert_aux_config.vocab_size)  # size = seq_len * vocab_size
     aux_label = torch.sum(input_ids_one_hot, dim=0).int()  # Careful with dim, first is seq_len
     input['aux_label'] = aux_label.to(torch.bool)
