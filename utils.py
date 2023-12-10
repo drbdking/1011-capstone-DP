@@ -18,10 +18,26 @@ nltk.download('punkt')
 
 stop_words = stopwords.words('english')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-bert_aux_config = BertConfig.from_pretrained("bert-base-uncased")
-bert_aux_model = BertModel.from_pretrained("bert-base-uncased")
+
+bert_aux_config, bert_aux_model = None, None
 aux_tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-bert_aux_model.to(device)
+
+
+def load_model(model_path, model_type):
+    global bert_aux_config, bert_aux_model
+    if model_type == 'ADV':  # Adversarial
+        bert_aux_config = BertConfig.from_pretrained("bert-base-uncased", output_hidden_states=True)
+        bert_aux_model = BertModel.from_pretrained("bert-base-uncased", config=bert_aux_config)
+        bert_aux_model.to(device)
+
+        model_state_dict = torch.load(model_path, map_location='cpu')
+        bert_aux_model.load_state_dict(model_state_dict['base_state_dict'])
+
+    elif model_type == 'BERT':  # BERT without fine-tuning
+        bert_aux_config = BertConfig.from_pretrained("bert-base-uncased")
+        bert_aux_model = BertModel.from_pretrained("bert-base-uncased")
+        bert_aux_model.to(device)
+
 
 def tokenize_func(input):
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
