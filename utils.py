@@ -38,6 +38,15 @@ def load_model(model_path, model_type):
         bert_aux_model = BertModel.from_pretrained("bert-base-uncased")
         bert_aux_model.to(device)
 
+    elif model_type == 'BERT-FT':  # BERT with fine-tuning and BERT with fine-tuning + noise
+        bert_aux_config = BertConfig.from_pretrained("bert-base-uncased")
+        bert_aux_model = BertModel.from_pretrained('bert-base-uncased')
+        bert_aux_model.to(device)
+
+        model_state_dict = torch.load(model_path, map_location='cpu')
+        bert_aux_model.load_state_dict(model_state_dict)
+
+
 
 def tokenize_func(input):
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
