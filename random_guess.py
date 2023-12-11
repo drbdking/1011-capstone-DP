@@ -43,7 +43,7 @@ def test_threat_model(test_loader, model, device):
         fn_total += fn
     precision = tp_total / (tp_total + fp_total)
     recall = tp_total / (tp_total + fn_total)
-    f1 = 2 * precision * recall / (precision + recall)
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) != 0 else 0
 
     return test_loss, precision, recall, f1
 
