@@ -184,6 +184,9 @@ if __name__ == '__main__':
     # Train threat model
     trained_model, training_losses, validation_losses = train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
+    training_losses = [loss.item() for loss in training_losses]
+    validation_losses = [loss.item() for loss in validation_losses]
+
     print("----------Start Testing----------")
 
     # Test threat model
