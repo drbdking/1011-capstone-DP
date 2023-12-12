@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     # Arguments
     parser.add_argument("--learning_rate", type=float, default=1e-3)
-    parser.add_argument("--num_epochs", type=int, default=100)
+    parser.add_argument("--num_epochs", type=int, default=50)
     parser.add_argument("--sample_size", type=int, default=20000)
     parser.add_argument("--batch_size", type=int, default=50)
     parser.add_argument("--val_interval", type=int, default=10)
@@ -204,6 +204,8 @@ if __name__ == '__main__':
 
     with open(results_file_path, 'w') as log_file:
 
+        log_file.write(f"Model: {model_name}\n")
+
         log_file.write("Training Loss:\n")
         training_loss_str = ",".join([f"{loss:.4f}" for loss in training_losses])
         log_file.write(training_loss_str + "\n")
@@ -217,6 +219,8 @@ if __name__ == '__main__':
 
     print("----------Print Results----------")
 
+    print(f'Model: {model_name}')
+    print(' ')
     print('Training Loss:')
     print(training_losses)
     print(' ')
