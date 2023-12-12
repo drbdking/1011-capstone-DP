@@ -15,5 +15,5 @@ export HF_HOME=/gpfs/scratch/changd14/.cache
 export PATH=/ext3/miniconda3/bin:$PATH
 conda activate 2590-hw3
 cd /gpfs/scratch/changd14/1011-capstone-DP
-python adv_ft.py --downsample 0.25 --adv_mode 0 --num_epochs 18 --warmup_epochs 3 --alpha $1 --batch_size 32 --adv_learning_rate $2 --use_separate_embedding
+python adv_ft.py --downsample 0.25 --adv_mode 0 --num_epochs $1 --warmup_epochs $2 --alpha $3 --batch_size 32 --adv_learning_rate $4 --use_separate_embedding
 "
