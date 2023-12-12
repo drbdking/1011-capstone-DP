@@ -1,7 +1,7 @@
 """Script for adversarial fine-tuning.
 """
 import argparse
-
+import os
 import torch
 from torch import nn
 from tqdm.auto import tqdm
@@ -23,10 +23,14 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
     train_progress_bar = tqdm(range(len(train_loader)))
     val_progress_bar = tqdm(range(len(val_loader)))
 
+    training_losses = []
+    validation_losses = []
+
     for epoch in range(args.num_epochs):
         print("-" * 10)
         print(f"epoch {epoch + 1}/{args.num_epochs}")
-        
+
+        # Training Loss
         step = 0
         training_loss = 0
         model.train()
@@ -49,28 +53,33 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
             train_progress_bar.update(1)
 
         training_loss /= step
+        training_losses.append(training_loss)
 
-        print(f"epoch {epoch + 1} train loss: {training_loss:.4f}")
+        # Validation Loss
+        step = 0
+        val_loss = 0
+        model.eval()
+
+        val_progress_bar.refresh()
+        val_progress_bar.reset()
+
+        with torch.no_grad():
+            for batch in val_loader:
+                step += 1
+                sentence_embedding = batch['sentence_embedding'].to(device)
+                aux_label = batch['aux_label'].to(device)
+                output, loss = model(sentence_embedding, aux_label)
+                val_loss += loss
+                val_progress_bar.update(1)
+        val_loss /= step
+        validation_losses.append(val_loss)
+
+        print(f"epoch {epoch + 1}, training loss: {training_loss:.4f}, val loss: {val_loss:.4f}")
 
 
+        # Evaluation Metrics
         if (epoch + 1) % args.val_interval == 0:
-            step = 0
-            tp_total, fp_total, fn_total, val_loss = 0, 0, 0, 0
-            
-            model.eval()
-
-            val_progress_bar.refresh()
-            val_progress_bar.reset()
-
-            with torch.no_grad():
-                for batch in val_loader:
-                    step += 1
-                    sentence_embedding = batch['sentence_embedding'].to(device)
-                    aux_label = batch['aux_label'].to(device)
-                    output, loss = model(sentence_embedding, aux_label)
-                    val_loss += loss
-                    val_progress_bar.update(1)
-            val_loss /= step
+            tp_total, fp_total, fn_total = 0, 0, 0
 
             # Calculate evaluation metrics on the last batch
             one_hot_labels = aux_label.cpu()
@@ -82,7 +91,7 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
                 fn_total += fn
             precision = tp_total / (tp_total + fp_total)
             recall = tp_total / (tp_total + fn_total)
-            f1 = 2 * precision * recall / (precision + recall)
+            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) != 0 else 0
 
             print(f"epoch {epoch + 1}, val loss: {val_loss:.4f}, val precision: {precision:.4f}, val recall: {recall:.4f}, val f1: {f1:.4f}")
 
@@ -98,10 +107,10 @@ def train_threat_model(train_loader, val_loader, model, optimizer, device, args)
                 print(f"Prediction Set: {decoded_pred}")
                 print("----------")
 
-
     train_progress_bar.close()
     val_progress_bar.close()
-    return 
+
+    return model, training_losses, validation_losses
 
 
 def test_threat_model(test_loader, model, device):
@@ -129,9 +138,9 @@ def test_threat_model(test_loader, model, device):
         fn_total += fn
     precision = tp_total / (tp_total + fp_total)
     recall = tp_total / (tp_total + fn_total)
-    f1 = 2 * precision * recall / (precision + recall)
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) != 0 else 0
 
-    print(f"test loss: {test_loss:.4f}, test precision: {precision:.4f}, test recall: {recall:.4f}, test f1: {f1:.4f}")
+    return test_loss, precision, recall, f1
 
 
 if __name__ == '__main__':
@@ -173,12 +182,49 @@ if __name__ == '__main__':
     print("----------Start Training----------")
 
     # Train threat model
-    train_threat_model(train_loader, val_loader, model, optimizer, device, args)
+    trained_model, training_losses, validation_losses = train_threat_model(train_loader, val_loader, model, optimizer, device, args)
 
     print("----------Start Testing----------")
 
     # Test threat model
-    test_threat_model(test_loader, model, device)
+    test_loss, test_precision, test_recall, test_f1 = test_threat_model(test_loader, trained_model, device)
+
+    print("----------Save Results----------")
+
+    model_path = args.model_path
+    model_filename = os.path.basename(model_path)
+    model_name = os.path.splitext(model_filename)[0]
+    results_file_path = os.path.join("results", model_name + ".txt")
+
+    if not os.path.exists('results'):
+        os.makedirs('results')
+
+    with open(results_file_path, 'w') as log_file:
+
+        log_file.write("Training Loss:\n")
+        training_loss_str = ",".join([f"{loss:.4f}" for loss in training_losses])
+        log_file.write(training_loss_str + "\n")
+
+        log_file.write("\nValidation Loss:\n")
+        validation_loss_str = ",".join([f"{loss:.4f}" for loss in validation_losses])
+        log_file.write(validation_loss_str + "\n")
+
+        log_file.write("\nTest Metrics:\n")
+        log_file.write(f"Test Loss: {test_loss:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1 Score: {test_f1:.4f}\n")
+
+    print("----------Print Results----------")
+
+    print('Training Loss:')
+    print(training_losses)
+    print(' ')
+    print('Validation Loss:')
+    print(validation_losses)
+    print(' ')
+    print('Test Metrics:')
+    print(f"Test Loss: {test_loss:.4f}, Test Precision: {test_precision:.4f}, Test Recall: {test_recall:.4f}, Test F1 Score: {test_f1:.4f}")
+
+
+
 
 
 
